@@ -1,0 +1,59 @@
+CONTRATOS AW — SITE (GitHub + Supabase + Vercel)
+================================================
+Usa o MESMO projeto Supabase do site de Solicitação de Compra, numa tabela própria
+(contratos_docs). Nada do outro site é alterado.
+
+Arquivos desta pasta
+--------------------
+index.html            O app (não precisa editar)
+adaptador.js          Liga o app ao login e ao banco do Supabase (não precisa editar)
+config-contratos.js   VOCÊ PREENCHE: endereço e chave do Supabase
+supabase-tabela.sql   Cria a tabela e as permissões no Supabase (rodar uma vez)
+dados-iniciais.json   Contratos, solicitações, recebimentos e ajustes atuais
+
+
+PASSO 1 — CRIAR A TABELA NO SUPABASE
+1. Abra o seu projeto no Supabase (o mesmo do site de Solicitação de Compra).
+2. Menu da esquerda: SQL Editor > New query.
+3. Abra o arquivo supabase-tabela.sql no Bloco de Notas, copie tudo, cole no Supabase
+   e clique em Run. Deve aparecer "Success. No rows returned".
+
+PASSO 2 — PREENCHER O config-contratos.js
+4. Abra o config.js do repositório solicitacoes-almoxarifado no GitHub e copie o
+   endereço do Supabase (https://....supabase.co) e a chave anon (começa com eyJ...).
+   Se preferir, os dois estão em Supabase > Project Settings > API
+   (Project URL e "anon public").
+5. Abra o config-contratos.js no Bloco de Notas, troque cada COLE_AQUI pelo valor
+   correspondente (mantendo as aspas) e salve.
+
+PASSO 3 — SUBIR NO GITHUB
+6. Em https://github.com/new crie o repositório contratos-almoxarifado
+   (pode ser Private) e clique em Create repository.
+7. Clique em "uploading an existing file", arraste todos os arquivos desta pasta
+   (com o config-contratos.js já preenchido) e clique em Commit changes.
+
+PASSO 4 — PUBLICAR NA VERCEL
+8. Na Vercel: Add New... > Project > importe contratos-almoxarifado > Deploy.
+   O site fica num endereço como https://contratos-almoxarifado.vercel.app
+9. No Supabase: Authentication > URL Configuration > Redirect URLs > Add URL e cole
+   o endereço do site. Isso faz os e-mails de confirmação e de "Esqueci a senha"
+   voltarem para o site certo.
+
+PASSO 5 — PRIMEIRO ACESSO
+10. Abra o site. Se você já tem login no site de Solicitação de Compra com
+    adail.junior@doismarcos.com.br, use Entrar com a mesma senha. Se não, use
+    Criar conta (se o Supabase pedir confirmação, clique no link do e-mail e
+    depois em Entrar).
+11. O site pergunta se quer carregar os dados atuais: clique em Carregar dados.
+12. Mande o endereço para a equipe. Cada um cria a conta com o próprio e-mail e entra
+    como solicitante: consulta o saldo e pede entregas, mas não altera contratos.
+
+A partir daí, use o site no lugar do app do Claude: os dois não sincronizam entre si.
+
+OUTRO ADMINISTRADOR
+Inclua o e-mail na lista do supabase-tabela.sql (função contratos_admin), rode de novo
+no SQL Editor, e inclua também no config-contratos.js (ADMINS).
+
+ATUALIZAR O SITE DEPOIS
+No GitHub: Add file > Upload files, arraste o arquivo novo e Commit changes.
+A Vercel publica sozinha. Os dados ficam no Supabase e não se perdem.

@@ -1,0 +1,1269 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config-contratos.js"></script>
+<script src="adaptador.js"></script>
+<title>Controle de Contratos AW</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<style>
+/* Layout: barra superior fixa com abas; conteúdo em largura de planilha (máx 1240px); tabelas roláveis no celular */
+:root{
+  --bg:#EEF2F0; --surface:#FFFFFF; --sunk:#E3E9E6; --ink:#14201D; --muted:#56665F; --line:#CFD8D4;
+  --accent:#0D6655; --accent-2:#0A5244; --accent-ink:#FFFFFF; --accent-soft:#D5EBE5;
+  --warn:#9A5B00; --warn-bg:#FBECD3; --bad:#B0281F; --bad-bg:#F9DEDB; --ok:#22703A; --ok-bg:#DCEFDF;
+  --bar-rec:#0D6655; --bar-pend:#D99A2B; --bar-free:#D3DCD8;
+  --f-disp:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1412; --surface:#161F1C; --sunk:#1D2825; --ink:#E2EBE7; --muted:#95A69F; --line:#2B3833;
+  --accent:#3DB39A; --accent-2:#5CC9B1; --accent-ink:#06120F; --accent-soft:#183A33;
+  --warn:#E8AE52; --warn-bg:#3A2C12; --bad:#F2766B; --bad-bg:#3D1C19; --ok:#73C786; --ok-bg:#183222;
+  --bar-rec:#3DB39A; --bar-pend:#D99A2B; --bar-free:#2B3833; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1412; --surface:#161F1C; --sunk:#1D2825; --ink:#E2EBE7; --muted:#95A69F; --line:#2B3833;
+  --accent:#3DB39A; --accent-2:#5CC9B1; --accent-ink:#06120F; --accent-soft:#183A33;
+  --warn:#E8AE52; --warn-bg:#3A2C12; --bad:#F2766B; --bad-bg:#3D1C19; --ok:#73C786; --ok-bg:#183222;
+  --bar-rec:#3DB39A; --bar-pend:#D99A2B; --bar-free:#2B3833; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding-block:10px 0}
+.brand{display:flex;align-items:baseline;gap:10px;padding-bottom:10px}
+.brand b{font-family:var(--f-disp);font-weight:700;font-size:22px;letter-spacing:.02em;text-transform:uppercase}
+.brand span{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;flex:1;min-width:0;scrollbar-width:none}
+nav.tabs button{font-family:var(--f-disp);font-weight:600;font-size:15px;letter-spacing:.04em;text-transform:uppercase;background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);padding:8px 12px 10px;cursor:pointer;white-space:nowrap}
+nav.tabs button:hover{color:var(--ink)}
+nav.tabs button[aria-current="page"]{color:var(--accent);border-bottom-color:var(--accent)}
+main.wrap{padding-block:22px 64px;display:grid;gap:22px}
+h1,h2,h3{font-family:var(--f-disp);font-weight:700;letter-spacing:.01em;text-wrap:balance;margin:0}
+h1{font-size:30px;text-transform:uppercase}
+h2{font-size:21px;text-transform:uppercase;letter-spacing:.03em}
+h3{font-size:17px}
+.sub{color:var(--muted);margin:2px 0 0}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.spread{display:flex;gap:12px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}
+.grid{display:grid;gap:14px}
+.g3{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;min-width:0}
+.panel.flush{padding:0;overflow:hidden}
+.label{font-family:var(--f-disp);font-weight:600;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mono{font-family:var(--f-mono);font-size:12.5px}
+.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.big{font-family:var(--f-disp);font-weight:600;font-size:26px;font-variant-numeric:tabular-nums;line-height:1.1}
+.muted{color:var(--muted)}
+.btn{text-decoration:none;font:600 13.5px var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:5px;padding:7px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.pri:hover{background:var(--accent-2);border-color:var(--accent-2)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.sm{padding:4px 9px;font-size:12.5px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:focus-visible,nav.tabs button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input,select,textarea{font:14px var(--f-body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:7px 9px;min-width:0}
+textarea{width:100%;min-height:64px;resize:vertical}
+input.q{width:96px;text-align:right;font-variant-numeric:tabular-nums;padding:5px 7px}
+input.q.err{border-color:var(--bad);background:var(--bad-bg)}
+.field{display:grid;gap:4px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font:600 13px var(--f-body);border:1px solid var(--line);border-radius:999px;padding:5px 12px;background:var(--surface);color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{font-family:var(--f-disp);font-weight:600;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);background:var(--sunk);white-space:nowrap;position:sticky;top:0}
+td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:color-mix(in srgb,var(--sunk) 55%,transparent)}
+tr.click{cursor:pointer}
+tfoot td{font-weight:600;background:var(--sunk)}
+td.desc{min-width:220px}
+.pill{display:inline-block;font:600 11.5px var(--f-body);letter-spacing:.02em;padding:2px 8px;border-radius:999px;white-space:nowrap;border:1px solid transparent}
+.p-ok{background:var(--ok-bg);color:var(--ok)}
+.p-warn{background:var(--warn-bg);color:var(--warn)}
+.p-bad{background:var(--bad-bg);color:var(--bad)}
+.p-draft{background:var(--sunk);color:var(--muted);border-color:var(--line)}
+.p-acc{background:var(--accent-soft);color:var(--accent)}
+.bar{display:flex;height:10px;border-radius:2px;overflow:hidden;background:var(--bar-free)}
+.bar i{display:block;height:100%}
+.bar .r{background:var(--bar-rec)} .bar .p{background:var(--bar-pend)}
+.mini{width:90px;height:6px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+.kv>div{display:grid;gap:2px}
+.card-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.tag{font-family:var(--f-mono);font-size:11.5px;padding:1px 6px;border:1px solid var(--line);border-radius:3px;color:var(--muted);white-space:nowrap}
+.notice{border-left:3px solid var(--warn);background:var(--warn-bg);color:var(--ink);padding:10px 12px;border-radius:0 5px 5px 0}
+.notice.info{border-left-color:var(--accent);background:var(--accent-soft)}
+.notice.bad{border-left-color:var(--bad);background:var(--bad-bg)}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+.doc{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:20px;display:grid;gap:16px}
+.doc-head{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:12px}
+.doc-num{font-family:var(--f-disp);font-weight:700;font-size:40px;line-height:1}
+.forn{display:grid;gap:6px}
+.forn h3{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.split{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:start}
+.sticky{position:sticky;top:calc(env(safe-area-inset-top,0px) + 70px)}
+@media (max-width:900px){.split{grid-template-columns:minmax(0,1fr)}.sticky{position:static}}
+.modal-bg{position:fixed;inset:0;background:rgba(8,14,12,.55);z-index:20;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:max(24px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) 24px max(12px,env(safe-area-inset-left,0px))}
+.modal{background:var(--surface);color:var(--ink);border-radius:8px;border:1px solid var(--line);width:min(920px,100%);padding:20px;display:grid;gap:14px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.modal.small{width:min(440px,100%)}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:6px;font-weight:500;z-index:30;max-width:calc(100% - 32px)}
+.drop{border:2px dashed var(--line);border-radius:8px;padding:28px;text-align:center;display:grid;gap:8px;justify-items:center}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+pre.mail{white-space:pre-wrap;font-family:var(--f-mono);font-size:12.5px;background:var(--sunk);border:1px solid var(--line);border-radius:5px;padding:12px;max-height:340px;overflow:auto;margin:0}
+.over{color:var(--bad);font-weight:600}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:8px}
+.stat{all:unset;box-sizing:border-box;cursor:pointer;display:grid;gap:3px;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+.stat b{font-family:var(--f-disp);font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1}
+.stat span{font-family:var(--f-disp);font-weight:600;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.stat[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 -3px 0 var(--ink)}
+.stat:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.stat.alert b{color:var(--warn)}
+.btn.wa{background:#1F8F4E;border-color:#1F8F4E;color:#fff}
+.btn.wa:hover{filter:brightness(1.08)}
+.btn.off{opacity:.45;pointer-events:none}
+.box{border:1px solid var(--line);border-radius:6px;padding:14px;display:grid;gap:10px;background:var(--sunk)}
+.box.done{border-color:var(--ok);background:var(--ok-bg)}
+.box h3{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+textarea.mailbody{min-height:220px;font-family:var(--f-mono);font-size:12.5px;line-height:1.5}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.log{margin:0;padding-left:18px;font-size:13px;color:var(--muted)}
+@media (max-width:520px){.big{font-size:20px}.brand span{display:none}h1{font-size:25px}.kv{grid-template-columns:1fr 1fr}.doc{padding:14px}.doc-num{font-size:32px}}
+@media (prefers-reduced-motion:no-preference){.bar i{transition:width .4s ease}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><b>Contratos AW</b><span>Filial 0201 · Armazém 41</span></div>
+    <nav class="tabs" id="tabs" aria-label="Seções">
+      <button data-go="painel">Painel</button>
+      <button data-go="saldo">Saldo do contrato</button>
+      <button data-go="nova">Nova solicitação</button>
+      <button data-go="solicitacoes">Solicitações</button>
+      <button data-go="recebimentos">Recebimentos</button>
+      <button data-go="importar">Importar ERP</button>
+      <button data-go="ajustes">Ajustes</button>
+    </nav>
+  </div>
+</header>
+<main class="wrap" id="main">
+  <div class="panel empty">
+    <h2>Carregando contratos…</h2>
+    <p class="sub">Os pedidos de contrato, solicitações e recebimentos aparecem aqui assim que a base for lida.</p>
+  </div>
+</main>
+<div id="modal-root"></div>
+<div id="toast" hidden></div>
+
+<script>
+(() => {
+'use strict';
+// ---------- estado ----------
+const S = {
+  db: null, dl: null, ready: {contratos:false, solicitacoes:false, recebimentos:false, config:false, retorno:false},
+  contratos: {}, sols: {}, topSols: {}, userSols: {}, ret: {}, recs: {}, config: {limiteParcelamento:20000, parcelas:6, emailCompras:'', ccCompras:'', emailAlmox:'', assinatura:'', categorias:['EPI','LIMPEZA']},
+  role: 'admin', uid: null, marker: false, rtEdit: null,
+  view: 'painel', param: null, M: null,
+  saldoFiltro: {cat:'TODAS', pc:'TODOS', q:'', soSaldo:false},
+  solFiltro: {st:'abertas', q:'', cat:'TODAS'}, draft: null, imp: null, pendingRender: false, readOnly: false,
+};
+const LS = {get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+
+// ---------- utilidades ----------
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fQ = n => (Number(n)||0).toLocaleString('pt-BR',{maximumFractionDigits:2});
+const fR = n => (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const fP = n => (Number(n)||0).toLocaleString('pt-BR',{style:'percent',maximumFractionDigits:0});
+const r2 = n => Math.round((Number(n)||0)*10000)/10000;
+const today = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+const fD = s => { if(!s) return '—'; const m=String(s).match(/^(\d{4})-(\d{2})-(\d{2})/); return m? `${m[3]}/${m[2]}/${m[1]}` : String(s); };
+const daysSince = s => { if(!s) return 0; const a=new Date(s+'T12:00:00'), b=new Date(today()+'T12:00:00'); return Math.round((b-a)/864e5); };
+const pad4 = n => String(n).padStart(4,'0');
+const key = (pc,cod) => pc+'|'+cod;
+const shortForn = s => String(s||'').replace(/\s+(EIRELI|LTDA|EPP|ME|S\.?A\.?)\b.*$/i,'').trim() || s;
+const parseNum = v => { if (v==null||v==='') return 0; if (typeof v==='number') return v; let s=String(v).replace(/R\$/g,'').replace(/ /g,'').trim(); if (s.includes(',')) s=s.replace(/\./g,'').replace(',','.'); const n=Number(s); return isFinite(n)?n:0; };
+const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>t.hidden=true,3200); }
+
+// ---------- cálculo central ----------
+function compute(){
+  const items = {}, byPc = {};
+  for (const c of Object.values(S.contratos)) {
+    byPc[c.pc] = [];
+    for (const it of (c.itens||[])) {
+      const k = key(c.pc, it.cod);
+      const row = {k, pc:c.pc, cat:c.categoria, forn:c.fornecedor, codForn:c.codFornecedor, cod:it.cod, desc:it.desc, un:it.un,
+        qtd:Number(it.qtd)||0, vunit:Number(it.vunit)||0, erp:Number(it.atendidaErp)||0, recebido:0, pend:0, pendBy:{}};
+      items[k] = row; byPc[c.pc].push(row);
+    }
+  }
+  const recSol = {};
+  for (const r of Object.values(S.recs)) for (const l of (r.itens||[])) {
+    const k = key(l.pc,l.cod); if (items[k]) items[k].recebido += Number(l.qtd)||0;
+    if (r.sol) { (recSol[r.sol] ||= {}); recSol[r.sol][k] = (recSol[r.sol][k]||0) + (Number(l.qtd)||0); }
+  }
+  const sols = Object.values(S.sols).map(s=>solView(s, items, recSol, true));
+  sols.sort((a,b)=>b.num-a.num);
+  for (const it of Object.values(items)) { it.disp = Math.max(0, r2(it.qtd - it.recebido - it.pend)); it.excesso = r2(it.recebido + it.pend - it.qtd); }
+  S.M = {items, byPc, sols, recSol, solById: Object.fromEntries(sols.map(s=>[s.id,s]))};
+}
+const ADM = () => S.role==='admin';
+function effStatus(s){ const r=S.ret[s.id]||{}; return s.autor ? (r.status||s.status) : s.status; }
+function effEnviada(s){ const r=S.ret[s.id]||{}; return s.autor ? (r.enviadaEm||s.enviadaEm||null) : (s.enviadaEm||null); }
+const numTxt = s => s && s.num ? pad4(s.num) : 'PRÉVIA';
+// monta a visão calculada de uma solicitação (situação, recebido, falta, etapa de aviso)
+function solView(s, items, recSol, reserva){
+  const status = effStatus(s), ret = S.ret[s.id]||{};
+  const ativa = ['rascunho','aguardando','enviada'].includes(status);
+  let tot=0, totRec=0, totPend=0, qtdTot=0, qtdRec=0;
+  const linhas = (s.itens||[]).map(l => {
+    const k = key(l.pc,l.cod), it = items[k] || {desc:'(item fora do contrato)', un:'', vunit:0, forn:S.contratos[l.pc]?.fornecedor||'', codForn:''};
+    const rec = Math.min(recSol[s.id]?.[k]||0, l.qtd);
+    const pend = ativa ? Math.max(0, l.qtd - rec) : 0;
+    if (reserva && ativa && items[k]) { items[k].pend += pend; items[k].pendBy[s.id] = pend; }
+    tot += l.qtd*it.vunit; totRec += rec*it.vunit; totPend += pend*it.vunit; qtdTot += l.qtd; qtdRec += rec;
+    return {...l, k, desc:it.desc, un:it.un, vunit:it.vunit, forn:it.forn, codForn:it.codForn, rec, pend, total:l.qtd*it.vunit};
+  });
+  const compras = ret.compras || null, avisos = ret.avisos || [];
+  let st;
+  if (status==='rascunho') st={t:'Rascunho',c:'p-draft',k:'envio'};
+  else if (status==='cancelada') st={t:'Cancelada',c:'p-draft',k:'canceladas'};
+  else if (qtdTot>0 && qtdRec>=qtdTot-1e-9) st={t:'Entregue',c:'p-ok',k:'entregues'};
+  else if (status==='encerrada') st={t:'Encerrada c/ falta',c:'p-draft',k:'canceladas'};
+  else if (status==='aguardando') st={t:'Aguardando envio ao Compras',c:'p-warn',k:'envio'};
+  else if (qtdRec>0) st={t:'Entrega parcial',c:'p-warn',k:'caminho'};
+  else if (compras) st={t:'Solicitada ao fornecedor',c:'p-acc',k:'caminho'};
+  else st={t:'Aguardando retorno do Compras',c:'p-acc',k:'retorno'};
+  let etapa=null;
+  if (st.k==='entregues') etapa='entrega';
+  else if (status==='enviada' && qtdRec>0) etapa='parcial';
+  else if (status==='enviada' && compras) etapa='retorno';
+  const contato = !!(s.email || s.zap);
+  const faltaAvisar = !!etapa && contato && !avisos.some(a=>a.etapa===etapa);
+  return {...s, status, enviadaEm:effEnviada(s), ret, compras, avisos, linhas, tot, totRec, totPend, qtdTot, qtdRec, st, etapa, contato, faltaAvisar,
+    aberta: ((status==='enviada'||status==='aguardando') && totPend>0.0001) || status==='rascunho'};
+}
+function contratoTotals(pc){
+  const rows = S.M.byPc[pc]||[]; let v=0,vr=0,vp=0,vd=0,div=0;
+  for (const it of rows){ v+=it.qtd*it.vunit; vr+=Math.min(it.recebido,it.qtd)*it.vunit; vp+=it.pend*it.vunit; vd+=it.disp*it.vunit; if (Math.abs(it.erp-it.recebido)>1e-9) div++; }
+  return {v,vr,vp,vd,div,n:rows.length, comSaldo: rows.filter(r=>r.disp>0).length};
+}
+function categorias(){ const set=new Set(S.config.categorias||[]); Object.values(S.contratos).forEach(c=>set.add(c.categoria)); return [...set]; }
+// numeração única entre todos os usuários (trava curta no documento seq/sol)
+async function nextSeq(){
+  const localMax=Math.max(0,...Object.values(S.sols).map(s=>Number(s.num)||0));
+  if (window.__proximoNumero) { try { return await window.__proximoNumero(localMax+1); } catch(e){ console.warn('numeração', e); } }
+  const ref=S.db.doc('seq/sol'); const holder='h'+Math.random().toString(36).slice(2)+Date.now().toString(36);
+  for (let i=0;i<20;i++){
+    let r=null; try{ r=await ref.acquire({holder, ttlMs:4000}); }catch(e){ r=null; }
+    if (!r) break;
+    if (r.acquired){ const snap=await ref.get(); const last=snap.exists?(Number(snap.data().ultimo)||0):0; const n=Math.max(last,localMax)+1; await ref.set({ultimo:n, em:Date.now()}); return n; }
+    await new Promise(res=>setTimeout(res,250+Math.random()*400));
+  }
+  return localMax+1;
+}
+function condPag(total){
+  const lim=Number(S.config.limiteParcelamento)||0, n=Number(S.config.parcelas)||1;
+  if (!total) return '—';
+  return (lim && total>lim) ? `Parcelado em ${n}x de ${fR(total/n)}` : 'À vista / condição padrão';
+}
+
+// ---------- persistência ----------
+async function write(col, id, data){
+  if (!S.db) { toast('Base indisponível nesta visualização.'); throw new Error('no-db'); }
+  return setRef(S.db.collection(col).doc(id), data);
+}
+async function setRef(ref, data){
+  try { await ref.set(JSON.parse(JSON.stringify(data))); }
+  catch(e){
+    if (e && e.code==='invalid_argument') { if (!ADM()) { S.role='viewer'; applyRole(); render(true); } toast('Você não tem permissão para essa alteração.'); }
+    else if (e && e.code==='quota_exceeded') toast('Limite da base atingido: '+(e.message||''));
+    else toast('Não foi possível salvar. Tente de novo.');
+    throw e;
+  }
+}
+const REFS={}, USERSUB={};
+function solRef(id){ return REFS[id] || S.db.collection('solicitacoes').doc(id); }
+async function setStatus(id, status, extra={}){
+  const s=S.sols[id]; if(!s) return;
+  if (s.autor){ await write('retorno', id, {...(S.ret[id]||{}), status, ...extra}); }
+  else { const d={...s, status, ...extra}; delete d.id; delete d.autor; await setRef(solRef(id), d); }
+}
+async function patchRet(id, data){ await write('retorno', id, {...(S.ret[id]||{}), ...data}); }
+async function delSol(id){ try{ await solRef(id).delete(); if (S.ret[id]) await S.db.collection('retorno').doc(id).delete(); }catch(e){ toast('Não foi possível excluir.'); throw e; } }
+async function remove(col, id){ if (!S.db) return; try{ await S.db.collection(col).doc(id).delete(); }catch(e){ toast('Não foi possível excluir.'); throw e; } }
+
+// ---------- navegação ----------
+function go(view, param=null){
+  if (view==='nova' && !S.draft) S.draft = novoDraft();
+  S.view=view; S.param=param;
+  if (['painel','saldo','nova','solicitacoes','recebimentos','importar','ajustes'].includes(view)) { try{ history.replaceState(null,'','#'+view); }catch(e){} }
+  render(true); window.scrollTo({top:0});
+}
+function novoDraft(cat){ return {id:null, num:null, categoria: cat || LS.get('cat','EPI'), qtd:{}, urgente:false, solicitante: LS.get('solicitante',''), email: LS.get('solEmail',''), zap: LS.get('solZap',''), obs:'', data: today(), q:'', soSaldo:true}; }
+function applyRole(){
+  document.querySelectorAll('#tabs [data-go="importar"], #tabs [data-go="ajustes"]').forEach(b=>b.hidden=!ADM());
+  if (!ADM() && ['importar','ajustes'].includes(S.view)) S.view='painel';
+}
+function roleNote(){
+  if (S.role==='user') return `<div class="notice info">Você está usando o app como <b>solicitante</b>: consulte o saldo e peça entregas em <b>Nova solicitação</b>. O almoxarifado confere, envia ao Compras e avisa você quando chegar.</div>`;
+  if (S.role==='viewer') return `<div class="notice">Você está com <b>acesso só de consulta</b>. Dá para ver o saldo e montar o pedido em <b>Nova solicitação</b>; no fim, use <b>Enviar ao almoxarifado pelo Outlook</b>. Para registrar direto no app, peça acesso de Contribuidor a quem compartilhou o link.</div>`;
+  return '';
+}
+
+function render(force){
+  if (!S.M) return;
+  const ae=document.activeElement;
+  if (!force && ae && ae.closest && ae.closest('#main, #modal-root') && /INPUT|TEXTAREA|SELECT/.test(ae.tagName)) { S.pendingRender=true; return; }
+  S.pendingRender=false;
+  document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-current', (b.dataset.go===S.view || (S.view==='sol' && b.dataset.go==='solicitacoes')) ? 'page':'false'));
+  if (!ADM() && ['importar','ajustes'].includes(S.view)) S.view='painel';
+  $('#main').innerHTML = roleNote() + (({painel:vPainel, saldo:vSaldo, nova:vNova, solicitacoes:vSols, sol:vSol, recebimentos:vRecs, importar:vImport, ajustes:vAjustes}[S.view]) || vPainel)();
+  if (S.view==='nova') atualizaNovaResumo();
+  if (S.view==='importar') bindDrop();
+  if (S.view==='sol') linksAviso();
+}
+document.addEventListener('focusout', ()=>{ setTimeout(()=>{ if (S.pendingRender) render(); }, 0); });
+
+// ---------- VIEWS ----------
+function barra(v, vr, vp, cls=''){
+  const pr = v? vr/v*100:0, pp = v? vp/v*100:0;
+  return `<div class="bar ${cls}" role="img" aria-label="Recebido ${fP(pr/100)}, em solicitação ${fP(pp/100)}"><i class="r" style="width:${pr.toFixed(2)}%"></i><i class="p" style="width:${Math.min(pp,100-pr).toFixed(2)}%"></i></div>`;
+}
+const legenda = `<div class="legend"><span><i style="background:var(--bar-rec)"></i>Recebido</span><span><i style="background:var(--bar-pend)"></i>Solicitado, a receber</span><span><i style="background:var(--bar-free)"></i>Disponível para solicitar</span></div>`;
+
+function vPainel(){
+  const pcs = Object.values(S.contratos).sort((a,b)=>a.categoria.localeCompare(b.categoria)||a.pc.localeCompare(b.pc));
+  if (!pcs.length) return `<div class="panel empty"><h2>Nenhum contrato carregado</h2><p class="sub">Importe a exportação do pedido de compra do ERP para começar.</p><p><button class="btn pri" data-go="importar">Importar ERP</button></p></div>`;
+  const cards = pcs.map(c=>{
+    const t = contratoTotals(c.pc);
+    return `<div class="panel grid" style="gap:12px">
+      <div class="card-head"><div><div class="label">${esc(c.categoria)} · PC <span class="mono">${esc(c.pc)}</span></div><h3>${esc(shortForn(c.fornecedor))}</h3></div>
+      <button class="btn sm" data-act="ver-saldo" data-pc="${esc(c.pc)}">Ver itens</button></div>
+      ${barra(t.v,t.vr,t.vp)}
+      <div class="kv">
+        <div><span class="label">Contratado</span><span class="big">${fR(t.v)}</span></div>
+        <div><span class="label">Recebido</span><span class="big">${fR(t.vr)}</span></div>
+        <div><span class="label">A receber</span><span class="big" style="color:var(--warn)">${fR(t.vp)}</span></div>
+        <div><span class="label">Disponível</span><span class="big">${fR(t.vd)}</span></div>
+      </div>
+      <div class="row muted" style="font-size:12.5px">${t.comSaldo} de ${t.n} itens com saldo · Comprador ${esc(c.comprador)} · SC ${esc(c.sc)} · emissão ${esc(c.emissao)}
+      ${t.div? `<span class="pill p-warn" title="Qtd. atendida no ERP diferente do recebido no app">${t.div} divergência${t.div>1?'s':''} c/ ERP</span>`:''}</div>
+    </div>`;
+  }).join('');
+  const abertas = S.M.sols.filter(s=>s.status==='enviada' && s.totPend>0.0001).sort((a,b)=>a.num-b.num);
+  const rasc = S.M.sols.filter(s=>s.status==='rascunho');
+  const nEnvio = S.M.sols.filter(s=>s.status==='aguardando').length, nAvisar = S.M.sols.filter(s=>s.faltaAvisar).length;
+  const linhasAb = abertas.map(s=>`<tr class="click" data-act="abrir-sol" data-id="${esc(s.id)}">
+      <td class="mono">${pad4(s.num)}</td><td>${esc(s.categoria)}</td><td>${fD(s.enviadaEm||s.data)}</td>
+      <td class="num">${daysSince(s.enviadaEm||s.data)} dias</td><td><span class="pill ${s.st.c}">${s.st.t}</span></td>
+      <td class="num">${s.linhas.filter(l=>l.pend>0).length} de ${s.linhas.length}</td><td class="num">${fR(s.totPend)}</td>
+      <td>${barra(s.tot,s.totRec,0,'mini')}</td></tr>`).join('');
+  const divItems = Object.values(S.M.items).filter(i=>i.erp>i.recebido+1e-9);
+  return `
+  <div class="spread"><div><h1>Painel de contratos</h1><p class="sub">Quanto já chegou, quanto foi pedido e ainda não chegou, e quanto ainda dá para pedir em cada contrato.</p></div>
+  <button class="btn pri" data-go="nova">+ Nova solicitação de entrega</button></div>
+  ${ADM() && (nEnvio||nAvisar)? `<div class="notice">${nEnvio?`<b>${nEnvio}</b> solicitaç${nEnvio>1?'ões':'ão'} aguardando envio ao Compras. <button class="btn sm" data-act="f-sol-go" data-v="envio">Ver</button> `:''}${nAvisar?`<b>${nAvisar}</b> solicitante${nAvisar>1?'s':''} para avisar. <button class="btn sm" data-act="f-sol-go" data-v="avisar">Ver</button>`:''}</div>`:''}
+  ${ADM() && divItems.length? `<div class="notice">O ERP mostra <b>${divItems.length} ite${divItems.length>1?'ns':'m'}</b> com quantidade atendida maior que o recebido lançado aqui. <button class="btn sm" data-act="sync-erp">Lançar recebimentos pelo ERP</button></div>`:''}
+  ${legenda}
+  <div class="grid g3">${cards}</div>
+  <section class="grid" style="gap:10px">
+    <div class="spread"><h2>Solicitações aguardando entrega</h2>${rasc.length?`<span class="pill p-draft">${rasc.length} rascunho${rasc.length>1?'s':''} não enviado${rasc.length>1?'s':''}</span>`:''}</div>
+    <div class="panel flush"><div class="tbl-wrap">${abertas.length? `<table><thead><tr><th>Nº</th><th>Contrato</th><th>Enviada em</th><th class="num">Há</th><th>Situação</th><th class="num">Itens pendentes</th><th class="num">Valor a receber</th><th>Entregue</th></tr></thead><tbody>${linhasAb}</tbody></table>`
+      : `<div class="empty">Nenhuma solicitação com entrega pendente.</div>`}</div></div>
+  </section>`;
+}
+
+function filtraItens(f){
+  const q = (f.q||'').trim().toLowerCase();
+  return Object.values(S.M.items).filter(i =>
+    (f.cat==='TODAS' || i.cat===f.cat) && (f.pc==='TODOS' || i.pc===f.pc) && (!f.soSaldo || i.disp>0) &&
+    (!q || i.desc.toLowerCase().includes(q) || i.cod.includes(q))
+  ).sort((a,b)=>a.pc.localeCompare(b.pc)||a.desc.localeCompare(b.desc));
+}
+function vSaldo(){
+  const f=S.saldoFiltro, cats=categorias();
+  const pcs = Object.values(S.contratos).filter(c=>f.cat==='TODAS'||c.categoria===f.cat);
+  if (f.pc!=='TODOS' && !pcs.some(c=>c.pc===f.pc)) f.pc='TODOS';
+  const rows = filtraItens(f);
+  let tv=0,tr=0,tp=0,td=0;
+  const body = rows.map(i=>{
+    tv+=i.qtd*i.vunit; tr+=Math.min(i.recebido,i.qtd)*i.vunit; tp+=i.pend*i.vunit; td+=i.disp*i.vunit;
+    const div = Math.abs(i.erp-i.recebido)>1e-9;
+    return `<tr class="click" data-act="item" data-k="${esc(i.k)}">
+      <td class="mono">${esc(i.pc)}</td><td class="mono">${esc(i.cod)}</td><td class="desc">${esc(i.desc)}</td><td>${esc(i.un)}</td>
+      <td class="num">${fQ(i.qtd)}</td><td class="num">${fQ(i.recebido)}${div?` <span class="pill p-warn" title="Qtd. atendida no ERP">ERP ${fQ(i.erp)}</span>`:''}</td>
+      <td class="num" style="color:var(--warn)">${i.pend?fQ(i.pend):'—'}</td>
+      <td class="num"><b>${fQ(i.disp)}</b>${i.excesso>1e-9?` <span class="pill p-bad" title="Recebido + solicitado passa do contratado">+${fQ(i.excesso)}</span>`:''}</td>
+      <td class="num">${fR(i.vunit)}</td><td class="num">${fR(i.disp*i.vunit)}</td>
+      <td>${barra(i.qtd,Math.min(i.recebido,i.qtd),i.pend,'mini')}</td></tr>`;
+  }).join('');
+  return `
+  <div class="spread"><div><h1>Saldo do contrato</h1><p class="sub">Disponível = contratado − recebido − solicitado ainda não entregue.</p></div>
+    <div class="row"><button class="btn" data-act="exp-saldo">Baixar Excel</button><button class="btn pri" data-act="nova-de-saldo">+ Solicitar entrega</button></div></div>
+  <div class="panel row" style="gap:14px">
+    <div class="chips" role="group" aria-label="Contrato">${['TODAS',...cats].map(c=>`<button class="chip" aria-pressed="${f.cat===c}" data-act="f-cat" data-v="${esc(c)}">${c==='TODAS'?'Todos':esc(c)}</button>`).join('')}</div>
+    <select id="f-pc" data-act="f-pc" aria-label="Pedido de compra"><option value="TODOS">Todos os PCs</option>${pcs.map(c=>`<option value="${esc(c.pc)}" ${f.pc===c.pc?'selected':''}>${esc(c.pc)} · ${esc(shortForn(c.fornecedor))}</option>`).join('')}</select>
+    <input id="f-q" type="search" placeholder="Buscar descrição ou código" value="${esc(f.q)}" data-act="f-q" style="flex:1;min-width:180px">
+    <label class="row" style="gap:6px"><input id="f-so" type="checkbox" data-act="f-so" ${f.soSaldo?'checked':''}> Só com saldo</label>
+  </div>
+  <div class="kv panel">
+    <div><span class="label">Contratado</span><span class="big">${fR(tv)}</span></div>
+    <div><span class="label">Recebido</span><span class="big">${fR(tr)}</span></div>
+    <div><span class="label">Solicitado, a receber</span><span class="big" style="color:var(--warn)">${fR(tp)}</span></div>
+    <div><span class="label">Disponível</span><span class="big">${fR(td)}</span></div>
+    <div><span class="label">% recebido</span><span class="big">${fP(tv?tr/tv:0)}</span></div>
+  </div>
+  <div class="panel flush"><div class="tbl-wrap">${rows.length?`<table>
+    <thead><tr><th>PC</th><th>Código</th><th>Descrição</th><th>Un.</th><th class="num">Contratado</th><th class="num">Recebido</th><th class="num">A receber</th><th class="num">Disponível</th><th class="num">V. unit.</th><th class="num">V. disponível</th><th></th></tr></thead>
+    <tbody>${body}</tbody></table>`:`<div class="empty">Nenhum item com esses filtros.</div>`}</div></div>`;
+}
+
+function vNova(){
+  const d=S.draft, cats=categorias();
+  const editing = d.id ? S.M.solById[d.id] : null;
+  const q=(d.q||'').trim().toLowerCase();
+  const rows = Object.values(S.M.items).filter(i=>i.cat===d.categoria).map(i=>({...i, dispD: r2(i.disp + (d.id? (i.pendBy[d.id]||0):0))}))
+    .filter(i => (d.qtd[i.k]>0) || ((!d.soSaldo || i.dispD>0) && (!q || i.desc.toLowerCase().includes(q) || i.cod.includes(q))))
+    .sort((a,b)=>((d.qtd[b.k]||0)>0)-((d.qtd[a.k]||0)>0) ||a.pc.localeCompare(b.pc) || a.desc.localeCompare(b.desc));
+  const body = rows.map(i=>{
+    const v=d.qtd[i.k]||'';
+    return `<tr><td class="mono">${esc(i.pc)}</td><td class="mono">${esc(i.cod)}</td><td class="desc">${esc(i.desc)}</td><td>${esc(i.un)}</td>
+      <td class="num">${fQ(i.dispD)}</td><td class="num">${fR(i.vunit)}</td>
+      <td class="num"><input class="q${v>i.dispD?' err':''}" id="q-${esc(i.k)}" type="number" min="0" step="any" inputmode="decimal" data-act="d-q" data-k="${esc(i.k)}" data-max="${i.dispD}" value="${v}" aria-label="Quantidade ${esc(i.desc)}"></td>
+      <td class="num" data-tot="${esc(i.k)}">${v?fR(v*i.vunit):''}</td></tr>`;
+  }).join('');
+  return `
+  <div class="spread"><div><h1>${editing?`Editar solicitação ${pad4(editing.num)}`:'Nova solicitação de entrega'}</h1>
+    <p class="sub">${ADM()?'Escolha o contrato, digite as quantidades e envie para o Compras pedir a entrega ao fornecedor.':'Escolha o contrato e digite as quantidades. O almoxarifado envia ao Compras, que pede a entrega ao fornecedor.'}</p></div>
+    ${editing?`<button class="btn" data-act="abrir-sol" data-id="${esc(d.id)}">Voltar sem salvar</button>`:`<button class="btn" data-act="limpar-draft">Limpar</button>`}</div>
+  <div class="split">
+    <div class="grid" style="gap:12px">
+      <div class="panel row" style="gap:14px">
+        <div class="chips" role="group" aria-label="Contrato">${cats.map(c=>`<button class="chip" aria-pressed="${d.categoria===c}" data-act="d-cat" data-v="${esc(c)}" ${editing?'disabled':''}>${esc(c)}</button>`).join('')}</div>
+        <input id="d-q" type="search" placeholder="Buscar descrição ou código" value="${esc(d.q)}" data-act="d-busca" style="flex:1;min-width:180px">
+        <label class="row" style="gap:6px"><input id="d-so" type="checkbox" data-act="d-so" ${d.soSaldo?'checked':''}> Só com saldo</label>
+      </div>
+      <div class="panel flush"><div class="tbl-wrap">${rows.length?`<table><thead><tr><th>PC</th><th>Código</th><th>Descrição</th><th>Un.</th><th class="num">Disponível</th><th class="num">V. unit.</th><th class="num">Qtd.</th><th class="num">Total</th></tr></thead><tbody>${body}</tbody></table>`:`<div class="empty">Nenhum item disponível neste contrato.</div>`}</div></div>
+    </div>
+    <aside class="panel grid sticky" style="gap:12px" id="resumo"></aside>
+  </div>`;
+}
+function atualizaNovaResumo(){
+  const d=S.draft, el=$('#resumo'); if (!el) return;
+  const linhas = Object.entries(d.qtd).filter(([k,v])=>v>0 && S.M.items[k]).map(([k,v])=>({it:S.M.items[k], q:v}));
+  const porPc = {}; let total=0, erros=0;
+  for (const l of linhas){ const t=l.q*l.it.vunit; total+=t; (porPc[l.it.pc] ||= {forn:l.it.forn, t:0, n:0}); porPc[l.it.pc].t+=t; porPc[l.it.pc].n++;
+    const max = l.it.disp + (d.id?(l.it.pendBy[d.id]||0):0); if (l.q>max+1e-9) erros++; }
+  el.innerHTML = `
+    <div><div class="label">Resumo</div><div class="big">${fR(total)}</div><div class="muted">${linhas.length} ite${linhas.length===1?'m':'ns'} · ${esc(d.categoria)}</div></div>
+    ${Object.entries(porPc).map(([pc,p])=>`<div class="row" style="justify-content:space-between;font-size:13px"><span><span class="mono">${esc(pc)}</span> · ${esc(shortForn(p.forn))} (${p.n})</span><b class="num">${fR(p.t)}</b></div>`).join('')}
+    <div><div class="label">Condição de pagamento</div><div>${esc(condPag(total))}</div></div>
+    ${erros?`<div class="notice bad">${erros} ite${erros>1?'ns':'m'} acima do saldo disponível.</div>`:''}
+    <div class="field"><label class="label" for="d-data">Data</label><input id="d-data" type="date" value="${esc(d.data)}" data-act="d-data"></div>
+    <div class="field"><label class="label" for="d-sol">Solicitante</label><input id="d-sol" value="${esc(d.solicitante)}" placeholder="Nome de quem pediu" data-act="d-solicitante"></div>
+    <div class="field"><label class="label" for="d-email">E-mail do solicitante</label><input id="d-email" type="email" value="${esc(d.email||'')}" placeholder="para avisar quando chegar" data-act="d-email"></div>
+    <div class="field"><label class="label" for="d-zap">WhatsApp do solicitante</label><input id="d-zap" type="tel" inputmode="tel" value="${esc(d.zap||'')}" placeholder="(64) 99999-9999" data-act="d-zap"></div>
+    <label class="row" style="gap:6px"><input id="d-urg" type="checkbox" data-act="d-urg" ${d.urgente?'checked':''}> Entrega urgente</label>
+    <div class="field"><label class="label" for="d-obs">Observação</label><textarea id="d-obs" data-act="d-obs" placeholder="Ex.: entregar até sexta, no almoxarifado central">${esc(d.obs)}</textarea></div>
+    <div class="grid" style="gap:8px">${(()=>{ const off=(!linhas.length||erros)?'disabled':'';
+      if (ADM()) return `<button class="btn pri" data-act="salvar-sol" data-modo="enviada" ${off}>Salvar e enviar ao Compras</button>
+      <button class="btn" data-act="salvar-sol" data-modo="rascunho" ${off}>Salvar como rascunho</button></div>
+    <p class="muted" style="margin:0;font-size:12px">Ao salvar e enviar, abre a tela do Outlook com a planilha e o texto prontos.</p>`;
+      if (S.role==='user') return `<button class="btn pri" data-act="salvar-sol" data-modo="aguardando" ${off}>Enviar solicitação ao almoxarifado</button></div>
+    <p class="muted" style="margin:0;font-size:12px">A quantidade já fica reservada no saldo. O almoxarifado confere e envia ao Compras; depois de enviada, só o almoxarifado altera.</p>`;
+      return `<button class="btn pri" data-act="envio-almox" ${off}>Enviar ao almoxarifado pelo Outlook</button></div>
+    <p class="muted" style="margin:0;font-size:12px">Com acesso só de consulta o pedido não fica gravado no app: ele vai por e-mail, com a planilha anexa, para o almoxarifado registrar.</p>`; })()}`;
+}
+
+const FILTROS_SOL = [['abertas','Em aberto'],['envio','Aguardando envio'],['retorno','Aguardando Compras'],['caminho','A caminho'],['entregues','Entregues'],['avisar','Falta avisar'],['canceladas','Canceladas'],['todas','Todas']];
+function filtraSol(s, st){
+  if (st==='todas') return true;
+  if (st==='abertas') return s.aberta;
+  if (st==='avisar') return s.faltaAvisar;
+  return s.st.k===st;
+}
+function vSols(){
+  const f=S.solFiltro, cats=categorias();
+  const base = S.M.sols.filter(s=>f.cat==='TODAS'||s.categoria===f.cat);
+  const q = norm(f.q||'');
+  const list = base.filter(s=>filtraSol(s,f.st)).filter(s=>{
+    if (!q) return true;
+    const hay = norm([pad4(s.num), s.num, s.solicitante, s.email, s.obs, s.compras?.num, ...s.linhas.map(l=>l.cod+' '+l.desc+' '+l.pc)].join(' '));
+    return q.split(/\s+/).every(t=>hay.includes(t));
+  });
+  const stats = FILTROS_SOL.map(([v,t])=>{ const n=base.filter(s=>filtraSol(s,v)).length;
+    return `<button class="stat ${v==='avisar'&&n?'alert':''}" aria-pressed="${f.st===v}" data-act="f-sol" data-v="${v}"><b>${n}</b><span>${t}</span></button>`; }).join('');
+  const body = list.map(s=>`<tr class="click" data-act="abrir-sol" data-id="${esc(s.id)}">
+    <td class="mono"><b>${numTxt(s)}</b>${s.urgente?' <span class="pill p-bad">Urgente</span>':''}</td><td>${fD(s.data)}</td><td>${esc(s.categoria)}</td>
+    <td>${[...new Set(s.linhas.map(l=>l.pc))].map(p=>`<span class="tag">${esc(p)}</span>`).join(' ')}</td>
+    <td>${esc(s.solicitante||'')}</td><td class="num">${s.linhas.length}</td><td class="num">${fR(s.tot)}</td><td class="num">${s.totPend>0.0001 && s.status==='enviada'?fR(s.totPend):'—'}</td>
+    <td><span class="pill ${s.st.c}">${s.st.t}</span>${s.faltaAvisar?' <span class="pill p-bad">Avisar</span>':''}</td>
+    <td class="mono">${esc(s.compras?.num||'—')}</td><td>${s.compras?.previsao?fD(s.compras.previsao):'—'}</td></tr>`).join('');
+  return `
+  <div class="spread"><div><h1>Solicitações de entrega</h1><p class="sub">Cada solicitação é um pedido de fornecimento dentro do contrato: almoxarifado → Compras → fornecedor → chegada.</p></div>
+  <button class="btn pri" data-go="nova">+ Nova solicitação</button></div>
+  <div class="stats">${stats}</div>
+  <div class="panel row" style="gap:14px">
+    <input id="s-q" type="search" placeholder="Buscar nº, solicitante, código, produto ou nº do Compras" value="${esc(f.q)}" data-act="s-q" style="flex:1;min-width:220px">
+    <select id="s-cat" data-act="s-cat" aria-label="Contrato"><option value="TODAS">Todos os contratos</option>${cats.map(c=>`<option ${f.cat===c?'selected':''}>${esc(c)}</option>`).join('')}</select>
+  </div>
+  <div class="panel flush"><div class="tbl-wrap">${list.length?`<table><thead><tr><th>Nº</th><th>Data</th><th>Contrato</th><th>PCs</th><th>Solicitante</th><th class="num">Itens</th><th class="num">Valor</th><th class="num">A receber</th><th>Situação</th><th>Nº Compras</th><th>Previsão</th></tr></thead><tbody>${body}</tbody></table>`:`<div class="empty">Nenhuma solicitação com esses filtros.</div>`}</div></div>`;
+}
+
+function vSol(){
+  const s=S.M.solById[S.param];
+  if (!s) return `<div class="panel empty">Solicitação não encontrada. <button class="btn" data-go="solicitacoes">Voltar</button></div>`;
+  const grupos = {};
+  s.linhas.forEach(l => (grupos[l.pc] ||= []).push(l));
+  let n=0;
+  const blocos = Object.entries(grupos).map(([pc,ls])=>{
+    const c=S.contratos[pc]||{}; const sub=ls.reduce((a,l)=>a+l.total,0);
+    return `<div class="forn"><h3><span class="mono">PC ${esc(pc)}</span> ${esc(c.fornecedor||'')} <span class="tag">cód. ${esc(c.codFornecedor||'')}</span></h3>
+    <div class="tbl-wrap"><table><thead><tr><th>Item</th><th>Código</th><th>Descrição</th><th>Un.</th><th class="num">Qtd.</th><th class="num">V. unit.</th><th class="num">Total</th><th class="num">Recebido</th><th class="num">Falta</th></tr></thead><tbody>
+    ${ls.map(l=>`<tr><td class="num">${++n}</td><td class="mono">${esc(l.cod)}</td><td class="desc">${esc(l.desc)}</td><td>${esc(l.un)}</td><td class="num"><b>${fQ(l.qtd)}</b></td><td class="num">${fR(l.vunit)}</td><td class="num">${fR(l.total)}</td>
+      <td class="num">${fQ(l.rec)}</td><td class="num" style="color:${l.pend>0?'var(--warn)':'inherit'}">${l.pend>0?fQ(l.pend):'—'}</td></tr>`).join('')}
+    </tbody><tfoot><tr><td colspan="6">Subtotal ${esc(shortForn(c.fornecedor||''))}</td><td class="num">${fR(sub)}</td><td colspan="2"></td></tr></tfoot></table></div></div>`;
+  }).join('');
+  const recs = Object.values(S.recs).filter(r=>r.sol===s.id).sort((a,b)=>String(b.data).localeCompare(a.data));
+  const ativa = s.status==='enviada' || s.status==='rascunho';
+  return `
+  <div class="spread"><button class="btn" data-go="solicitacoes">← Solicitações</button>
+    <div class="row">
+      ${ADM() && s.status!=='cancelada'?`<button class="btn ${s.status==='enviada'?'':'pri'}" data-act="copiar-email" data-id="${esc(s.id)}">Enviar ao Compras</button>`:''}
+      <button class="btn" data-act="exp-sol" data-id="${esc(s.id)}">Baixar Excel</button>
+      ${ADM() && (s.status==='rascunho'||s.status==='aguardando')?`<button class="btn" data-act="editar-sol" data-id="${esc(s.id)}">Editar</button><button class="btn" data-act="enviar-sol" data-id="${esc(s.id)}">Marcar como enviada</button>`:''}
+      ${ADM() && s.status==='enviada' && s.totPend>0.0001?`<button class="btn pri" data-act="receber" data-id="${esc(s.id)}">Registrar recebimento</button>`:''}
+      ${!ADM() && s.status==='aguardando' && S.config.emailAlmox?`<button class="btn" data-act="avisar-almox" data-id="${esc(s.id)}">Avisar o almoxarifado por e-mail</button>`:''}
+    </div></div>
+  <article class="doc">
+    <div class="doc-head">
+      <div><div class="label">Pedido de fornecimento · retirada parcial de contrato</div><div class="doc-num">Nº ${pad4(s.num)}</div>
+        <div class="muted">Contrato ${esc(s.categoria)} · Filial 0201 · Armazém 41 - AR. PADRÃO AW</div></div>
+      <div class="grid" style="gap:4px;justify-items:end;text-align:right">
+        <span class="pill ${s.st.c}">${s.st.t}</span>${s.urgente?'<span class="pill p-bad">Entrega urgente</span>':''}
+        <span>Data: <b>${fD(s.data)}</b></span>${s.enviadaEm?`<span class="muted">Enviada ao Compras em ${fD(s.enviadaEm)}</span>`:''}
+        ${s.solicitante?`<span class="muted">Solicitante: ${esc(s.solicitante)}</span>`:''}
+        ${s.email||s.zap?`<span class="muted">${[s.email,s.zap].filter(Boolean).map(esc).join(' · ')}</span>`:''}
+      </div>
+    </div>
+    ${blocos}
+    <div class="kv">
+      <div><span class="label">Total do pedido</span><span class="big">${fR(s.tot)}</span></div>
+      <div><span class="label">Condição de pagamento</span><span>${esc(condPag(s.tot))}</span></div>
+      <div><span class="label">Recebido</span><span class="big">${fR(s.totRec)}</span></div>
+      <div><span class="label">Falta receber</span><span class="big" style="color:var(--warn)">${fR(ativa?s.totPend:0)}</span></div>
+    </div>
+    ${s.obs?`<div><span class="label">Observação</span><p style="margin:2px 0 0">${esc(s.obs)}</p></div>`:''}
+  </article>
+  ${boxRetorno(s)}
+  ${boxAviso(s)}
+  <section class="grid" style="gap:10px"><h2>Recebimentos desta solicitação</h2>
+    <div class="panel flush"><div class="tbl-wrap">${recs.length?`<table><thead><tr><th>Data</th><th>NF</th><th>Origem</th><th class="num">Itens</th><th>Observação</th></tr></thead><tbody>
+    ${recs.map(r=>`<tr><td>${fD(r.data)}</td><td class="mono">${esc(r.nf||'—')}</td><td>${origemTxt(r.origem)}</td><td class="num">${(r.itens||[]).length}</td><td class="muted">${esc(r.obs||'')}</td></tr>`).join('')}
+    </tbody></table>`:`<div class="empty">Nada recebido ainda.</div>`}</div></div></section>
+  ${ADM()?`<div class="row">
+    ${s.status==='enviada' && s.totPend>0.0001?`<button class="btn" data-act="encerrar-sol" data-id="${esc(s.id)}">Encerrar o que falta</button>`:''}
+    ${s.status==='encerrada'?`<button class="btn" data-act="reabrir-sol" data-id="${esc(s.id)}">Reabrir pendências</button>`:''}
+    ${ativa && s.qtdRec===0?`<button class="btn danger" data-act="cancelar-sol" data-id="${esc(s.id)}">Cancelar solicitação</button>`:''}
+    ${s.status==='rascunho'||s.status==='cancelada'?`<button class="btn danger" data-act="excluir-sol" data-id="${esc(s.id)}">Excluir</button>`:''}
+  </div>`:''}`;
+}
+// ---------- retorno do Compras ----------
+function boxRetorno(s){
+  if (['rascunho','aguardando','cancelada'].includes(s.status) && !s.compras) return '';
+  const c = s.compras;
+  const resumo = c ? `<div class="kv">
+      <div><span class="label">Nº informado pelo Compras</span><b class="mono">${esc(c.num||'—')}</b></div>
+      <div><span class="label">Pedido ao fornecedor em</span><b>${fD(c.data)}</b></div>
+      <div><span class="label">Previsão de entrega</span><b>${c.previsao?fD(c.previsao):'—'}</b></div>
+      ${c.obs?`<div><span class="label">Observação</span><b>${esc(c.obs)}</b></div>`:''}</div>` : '';
+  if (!ADM()) return c ? `<section class="box done"><h3>Retorno do Compras</h3>${resumo}</section>` : `<section class="box"><h3>Retorno do Compras</h3><p class="muted" style="margin:0">O Compras ainda não informou o pedido ao fornecedor.</p></section>`;
+  const editando = !c || S.rtEdit===s.id;
+  if (!editando) return `<section class="box done"><h3>Retorno do Compras <span class="pill p-ok">Registrado</span></h3>${resumo}<div><button class="btn sm" data-act="rt-editar" data-id="${esc(s.id)}">Editar retorno</button></div></section>`;
+  return `<section class="box"><h3>Retorno do Compras</h3>
+    <p class="muted" style="margin:0">Quando o Compras confirmar que pediu a entrega ao fornecedor, registre aqui. A situação passa para <b>Solicitada ao fornecedor</b> e você pode avisar o solicitante.</p>
+    <div class="fields">
+      <div class="field"><label class="label" for="rt-num">Nº informado pelo Compras</label><input id="rt-num" value="${esc(c?.num||'')}" placeholder="Ex.: AE 1234 ou protocolo"></div>
+      <div class="field"><label class="label" for="rt-data">Pedido ao fornecedor em</label><input id="rt-data" type="date" value="${esc(c?.data||today())}"></div>
+      <div class="field"><label class="label" for="rt-prev">Previsão de entrega</label><input id="rt-prev" type="date" value="${esc(c?.previsao||'')}"></div>
+      <div class="field"><label class="label" for="rt-obs">Observação</label><input id="rt-obs" value="${esc(c?.obs||'')}" placeholder="Ex.: fornecedor entrega em 2 lotes"></div>
+    </div>
+    <div class="row"><button class="btn pri" data-act="rt-salvar" data-id="${esc(s.id)}">Salvar retorno do Compras</button>${c?`<button class="btn" data-act="rt-cancel">Cancelar</button>`:''}</div></section>`;
+}
+// ---------- aviso ao solicitante ----------
+const ETAPA_TXT = {retorno:'enviada ao fornecedor', parcial:'chegou parcialmente', entrega:'chegou ao almoxarifado'};
+const VIA_TXT = {email:'E-mail', whatsapp:'WhatsApp', outro:'Outro meio'};
+function saudacao(){ const h=new Date().getHours(); return h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'; }
+const cap = w => w ? w.charAt(0).toUpperCase()+w.slice(1).toLowerCase() : '';
+function listaItens(ls, campo){ const L=ls.slice(0,30).map((l,i)=>`${i+1}. ${l.cod} - ${l.desc} - QTD: ${fQ(l[campo])} ${l.un}`); if (ls.length>30) L.push(`... e mais ${ls.length-30} itens.`); return L.join('\n'); }
+function assuntoAviso(s){ return `Solicitação de entrega Nº ${numTxt(s)} - ${ETAPA_TXT[s.etapa]||''}`; }
+function textoAviso(s){
+  const nome = cap(String(s.solicitante||'').trim().split(/\s+/)[0]); const c=s.compras||{};
+  const abre = `${saudacao()}${nome?', '+nome:''}!`;
+  const ref = `Sua solicitação de entrega Nº ${numTxt(s)} (contrato ${s.categoria}), de ${fD(s.data)}`;
+  const fim = `
+
+Atenciosamente,
+${S.config.assinatura||''}`.trimEnd();
+  if (s.etapa==='entrega') return `${abre}
+
+${ref}, chegou ao almoxarifado e está disponível para retirada.
+
+Itens:
+${listaItens(s.linhas,'qtd')}${fim}`;
+  if (s.etapa==='parcial') return `${abre}
+
+${ref}, chegou parcialmente ao almoxarifado. Os itens que chegaram já estão disponíveis para retirada.
+
+Já chegou:
+${listaItens(s.linhas.filter(l=>l.rec>0),'rec')}
+
+Ainda falta:
+${listaItens(s.linhas.filter(l=>l.pend>0),'pend')}
+
+Avisaremos quando o restante chegar.${fim}`;
+  return `${abre}
+
+${ref}, foi enviada ao fornecedor pelo setor de Compras.${c.num?`
+Nº informado pelo Compras: ${c.num}`:''}${c.previsao?`
+Previsão de entrega: ${fD(c.previsao)}`:''}
+
+Itens:
+${listaItens(s.linhas,'qtd')}
+
+Avisaremos quando chegar ao almoxarifado.${fim}`;
+}
+function waHref(fone, texto){ let d=String(fone||'').replace(/\D/g,''); if (d.length===10||d.length===11) d='55'+d; return 'https://wa.me/'+d+'?text='+encodeURIComponent(texto); }
+function linksAviso(){
+  const em=$('#av-email')?.value.trim()||'', zap=$('#av-zap')?.value.trim()||'', tx=$('#av-texto')?.value||'', as=$('#av-assunto')?.value||'';
+  const m=$('#av-mail'), w=$('#av-wa');
+  if (m){ m.href = linkOutlook(S.config.outlookModo||'app', em, as, tx); m.toggleAttribute('aria-disabled', !em); m.classList.toggle('off', !em); }
+  if (w){ w.href = waHref(zap, tx); w.classList.toggle('off', zap.replace(/\D/g,'').length<10); }
+}
+function boxAviso(s){
+  if (!ADM()) return '';
+  const log = s.avisos.length ? `<ul class="log">${s.avisos.map(a=>`<li>${VIA_TXT[a.via]||a.via} · ${ETAPA_TXT[a.etapa]||a.etapa} · ${new Date(a.em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</li>`).join('')}</ul>` : '';
+  if (!s.etapa) return log ? `<section class="box"><h3>Avisos ao solicitante</h3>${log}</section>` : '';
+  const feito = !s.faltaAvisar && s.contato;
+  return `<section class="box ${feito?'done':''}"><h3>Avisar o solicitante <span class="pill ${feito?'p-ok':'p-warn'}">${feito?'Avisado':'Falta avisar'}</span><span class="muted" style="font-weight:400;font-family:var(--f-body);font-size:13px">Etapa: ${ETAPA_TXT[s.etapa]}</span></h3>
+    <div class="fields">
+      <div class="field"><label class="label" for="av-email">E-mail</label><input id="av-email" type="email" value="${esc(s.email||'')}" data-act="av-campo" placeholder="e-mail do solicitante"></div>
+      <div class="field"><label class="label" for="av-zap">WhatsApp</label><input id="av-zap" type="tel" value="${esc(s.zap||'')}" data-act="av-campo" placeholder="(64) 99999-9999"></div>
+      <div class="field" style="grid-column:1/-1"><label class="label" for="av-assunto">Assunto do e-mail</label><input id="av-assunto" value="${esc(assuntoAviso(s))}" data-act="av-campo"></div>
+    </div>
+    <div class="field"><label class="label" for="av-texto">Mensagem</label><textarea id="av-texto" class="mailbody" data-act="av-campo" style="min-height:180px">${esc(textoAviso(s))}</textarea></div>
+    <div class="row">
+      <a class="btn pri" id="av-mail" href="#" target="_blank" rel="noopener" data-act="av-enviar" data-via="email" data-id="${esc(s.id)}">Abrir e-mail no Outlook</a>
+      <a class="btn wa" id="av-wa" href="#" target="_blank" rel="noopener" data-act="av-enviar" data-via="whatsapp" data-id="${esc(s.id)}">Enviar pelo WhatsApp</a>
+      <button class="btn" data-act="av-enviar" data-via="outro" data-id="${esc(s.id)}">Avisei por outro meio</button>
+    </div>
+    ${log}</section>`;
+}
+function recPorPc(r){
+  const g={}; (r.itens||[]).forEach(l=>(g[l.pc] ||= []).push(l));
+  let total=0;
+  const blocos = Object.keys(g).sort().map(pc=>{
+    const c=S.contratos[pc]||{}; let sub=0;
+    const linhas=g[pc].map(l=>{ const it=S.M.items[key(l.pc,l.cod)]||{}; const v=l.qtd*(it.vunit||0); sub+=v;
+      return `<tr><td class="mono">${esc(l.cod)}</td><td class="desc">${esc(it.desc||'')}</td><td class="num">${fQ(l.qtd)} ${esc(it.un||'')}</td><td class="num">${fR(it.vunit)}</td><td class="num">${fR(v)}</td></tr>`; }).join('');
+    total+=sub;
+    return `<div class="forn"><h3><span class="mono">PC ${esc(pc)}</span> ${esc(c.fornecedor||'')} ${c.codFornecedor?`<span class="tag">cód. ${esc(c.codFornecedor)}</span>`:''}</h3>
+      <div class="tbl-wrap"><table><thead><tr><th>Código</th><th>Descrição</th><th class="num">Qtd.</th><th class="num">V. unit.</th><th class="num">Total</th></tr></thead><tbody>${linhas}</tbody>
+      <tfoot><tr><td colspan="2">${g[pc].length} ite${g[pc].length>1?'ns':'m'} · subtotal ${esc(shortForn(c.fornecedor||''))}</td><td colspan="3" class="num">${fR(sub)}</td></tr></tfoot></table></div></div>`;
+  }).join('');
+  return blocos + (Object.keys(g).length>1?`<div class="row" style="justify-content:flex-end"><span class="label">Total do recebimento</span><b class="num">${fR(total)}</b></div>`:'');
+}
+const origemTxt = o => ({'erp-inicial':'<span class="pill p-draft">Carga inicial ERP</span>','erp':'<span class="pill p-acc">ERP</span>','app':'<span class="pill p-ok">Lançado no app</span>'}[o] || esc(o||''));
+
+function vRecs(){
+  const list = Object.entries(S.recs).map(([id,r])=>({id,...r})).sort((a,b)=>String(b.data).localeCompare(a.data)||String(b.id).localeCompare(a.id));
+  const grupos = {};
+  for (const r of list){
+    const s=r.sol?S.M.solById[r.sol]:null;
+    const porPc={}; (r.itens||[]).forEach(l=>{ const it=S.M.items[key(l.pc,l.cod)]; const g=(porPc[l.pc] ||= {n:0,v:0}); g.n++; if (it) g.v+=l.qtd*it.vunit; });
+    for (const [pc,g] of Object.entries(porPc)) (grupos[pc] ||= []).push({r, s, n:g.n, v:g.v});
+  }
+  const pcsOrd = Object.keys(grupos).sort((a,b)=>{ const ca=S.contratos[a]||{}, cb=S.contratos[b]||{}; return String(ca.categoria).localeCompare(cb.categoria)||a.localeCompare(b); });
+  const secoes = pcsOrd.map(pc=>{
+    const c=S.contratos[pc]||{}, rows=grupos[pc]; const tot=rows.reduce((a,x)=>a+x.v,0);
+    return `<section class="panel flush">
+      <div class="spread" style="padding:14px 16px;border-bottom:1px solid var(--line)">
+        <div><div class="label">${esc(c.categoria||'')} · PC <span class="mono">${esc(pc)}</span>${c.codFornecedor?` · cód. ${esc(c.codFornecedor)}`:''}</div><h3>${esc(c.fornecedor||'')}</h3></div>
+        <div style="text-align:right"><div class="label">${rows.length} recebimento${rows.length>1?'s':''}</div><div class="big" style="font-size:21px">${fR(tot)}</div></div></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Data</th><th>NF</th><th>Solicitação</th><th>Origem</th><th class="num">Itens</th><th class="num">Valor</th><th>Observação</th></tr></thead><tbody>
+      ${rows.map(({r,s,n,v})=>`<tr class="click" data-act="ver-rec" data-id="${esc(r.id)}" data-pc="${esc(pc)}"><td>${fD(r.data)}</td><td class="mono">${esc(r.nf||'—')}</td>
+        <td>${s?`<span class="mono">${pad4(s.num)}</span>`:'<span class="muted">Sem solicitação</span>'}</td><td>${origemTxt(r.origem)}</td>
+        <td class="num">${n}</td><td class="num">${fR(v)}</td><td class="muted">${esc(r.obs||'')}</td></tr>`).join('')}
+      </tbody></table></div></section>`;
+  }).join('');
+  return `
+  <div class="spread"><div><h1>Recebimentos</h1><p class="sub">Tudo o que chegou dos contratos: lançado aqui na chegada ou trazido da Qtd. atendida do ERP.</p></div>
+  ${ADM()?'<button class="btn pri" data-act="receber">+ Registrar recebimento</button>':''}</div>
+  ${list.length? secoes : `<div class="panel empty">Nenhum recebimento lançado.</div>`}`;
+}
+
+function vImport(){
+  const imp=S.imp;
+  const prev = imp ? imp.pcs.map(p=>{
+    const ch=p.changes;
+    return `<div class="panel grid" style="gap:10px">
+      <div class="card-head"><div><div class="label">PC <span class="mono">${esc(p.pc)}</span> · ${p.novo?'<span class="pill p-acc">Novo contrato</span>':'<span class="pill p-draft">Atualização</span>'}</div><h3>${esc(p.c.fornecedor)}</h3><div class="muted">${p.c.itens.length} itens · SC ${esc(p.c.sc)} · emissão ${esc(p.c.emissao)}</div></div>
+      <div class="field"><label class="label" for="imp-cat-${esc(p.pc)}">Contrato</label>
+        <input id="imp-cat-${esc(p.pc)}" list="cats" value="${esc(p.c.categoria)}" data-act="imp-cat" data-pc="${esc(p.pc)}" style="width:140px"></div></div>
+      ${p.novo?'':`<ul style="margin:0;padding-left:18px">
+        <li>${ch.novos} ite${ch.novos===1?'m novo':'ns novos'} · ${ch.removidos} fora da nova exportação (mantidos)</li>
+        <li>${ch.qtd} com quantidade contratada alterada · ${ch.preco} com preço alterado</li>
+        <li><b>${ch.atend}</b> com quantidade atendida maior no ERP (${fQ(ch.atendQ)} un. a lançar como recebidas)</li></ul>`}
+    </div>`;
+  }).join('') : '';
+  return `
+  <div><h1>Importar do ERP</h1><p class="sub">Use a mesma exportação do pedido de compra que você já tira do sistema (colunas Número PC, Cód. Produto, Quantidade, Quantidade Atendida…). Serve para cadastrar um contrato novo ou atualizar o que já chegou.</p></div>
+  <label class="drop" id="drop" for="imp-file">
+    <b>Arraste a planilha aqui ou clique para escolher</b><span class="muted">.xlsx, .xls ou .csv · pode ter mais de um PC na mesma planilha</span>
+    <input id="imp-file" type="file" accept=".xlsx,.xls,.xlsm,.csv" data-act="imp-file" hidden>
+  </label>
+  <datalist id="cats">${categorias().map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
+  ${imp?`<div class="grid" style="gap:12px">
+    <h2>Conferência: ${esc(imp.nome)}</h2>${prev}
+    <label class="row" style="gap:6px"><input id="imp-sync" type="checkbox" ${imp.sync?'checked':''} data-act="imp-sync"> Lançar como recebido a diferença da Qtd. atendida do ERP (vai primeiro para as solicitações mais antigas em aberto)</label>
+    <div class="row"><button class="btn pri" data-act="imp-ok" ${ADM()?'':'disabled'}>Confirmar importação</button><button class="btn" data-act="imp-cancel">Descartar</button></div>
+  </div>`:''}`;
+}
+
+function vAjustes(){
+  const c=S.config;
+  return `
+  <div><h1>Ajustes</h1><p class="sub">Regras usadas nas solicitações e no envio ao Compras.</p></div>
+  <div class="panel grid" style="gap:14px;max-width:620px">
+    <div class="row" style="align-items:flex-end">
+      <div class="field"><label class="label" for="a-lim">Limite para parcelamento (R$)</label><input id="a-lim" type="number" min="0" step="0.01" value="${esc(c.limiteParcelamento)}"></div>
+      <div class="field"><label class="label" for="a-parc">Nº de parcelas acima do limite</label><input id="a-parc" type="number" min="1" step="1" value="${esc(c.parcelas)}"></div>
+    </div>
+    <div class="field"><label class="label" for="a-mail">E-mail do setor de Compras</label><input id="a-mail" type="email" value="${esc(c.emailCompras||'')}" placeholder="compras@empresa.com.br"></div>
+    <div class="field"><label class="label" for="a-cc">Com cópia (CC) no envio ao Compras</label><input id="a-cc" value="${esc(c.ccCompras||'')}" placeholder="separe vários e-mails com ;"></div>
+    <div class="field"><label class="label" for="a-almox">E-mail do almoxarifado</label><input id="a-almox" type="email" value="${esc(c.emailAlmox||'')}" placeholder="recebe os pedidos de quem usa o link"></div>
+    <div class="field"><label class="label" for="a-assin">Assinatura dos e-mails</label><input id="a-assin" value="${esc(c.assinatura||'')}" placeholder="Ex.: ADAIL JUNIOR - Almoxarifado"></div>
+    <div class="field"><label class="label" for="a-modo">Abrir e-mail em</label><select id="a-modo">${Object.entries(MODOS_OUTLOOK).map(([k,m])=>`<option value="${k}" ${k===(c.outlookModo||'app')?'selected':''}>${esc(m.t)}</option>`).join('')}</select></div>
+    <div class="field"><label class="label" for="a-cats">Contratos (categorias), separados por vírgula</label><input id="a-cats" value="${esc((c.categorias||[]).join(', '))}"></div>
+    <div><button class="btn pri" data-act="salvar-ajustes" ${ADM()?'':'disabled'}>Salvar ajustes</button></div>
+  </div>
+  <div class="panel grid" style="gap:8px;max-width:620px">
+    <h3>Como o saldo é calculado</h3>
+    <p style="margin:0">Para cada item: <b>Disponível</b> = Qtd. contratada − Recebido − Solicitado ainda não entregue. O recebido vem dos recebimentos lançados aqui. Quando você importa uma exportação nova do ERP, a diferença da Qtd. atendida vira recebimento automaticamente.</p>
+  </div>`;
+}
+
+// ---------- modais ----------
+function modal(html, cls=''){ $('#modal-root').innerHTML = `<div class="modal-bg" data-act="modal-bg"><div class="modal ${cls}" role="dialog" aria-modal="true">${html}</div></div>`; const f=$('#modal-root input, #modal-root textarea, #modal-root button'); if (f) f.focus(); }
+function closeModal(){ $('#modal-root').innerHTML=''; if (S.pendingRender) render(); }
+let confirmCb=null;
+function confirmar(titulo, texto, rotulo, cb, danger=true){
+  confirmCb=cb;
+  modal(`<h2>${esc(titulo)}</h2><p style="margin:0">${texto}</p><div class="row" style="justify-content:flex-end"><button class="btn" data-act="modal-close">Voltar</button><button class="btn ${danger?'danger':'pri'}" data-act="confirm-yes">${esc(rotulo)}</button></div>`,'small');
+}
+
+function itemHist(k){
+  const it=S.M.items[k]; if(!it) return;
+  const sols = S.M.sols.filter(s=>s.linhas.some(l=>l.k===k)).map(s=>({s, l:s.linhas.find(l=>l.k===k)}));
+  const recs = Object.values(S.recs).filter(r=>(r.itens||[]).some(l=>key(l.pc,l.cod)===k)).map(r=>({r, q:r.itens.filter(l=>key(l.pc,l.cod)===k).reduce((a,l)=>a+l.qtd,0)})).sort((a,b)=>String(b.r.data).localeCompare(a.r.data));
+  modal(`<div class="spread"><div><div class="label">PC ${esc(it.pc)} · ${esc(it.cod)}</div><h2>${esc(it.desc)}</h2></div><button class="btn" data-act="modal-close">Fechar</button></div>
+  <div class="kv"><div><span class="label">Contratado</span><span class="big">${fQ(it.qtd)} ${esc(it.un)}</span></div><div><span class="label">Recebido</span><span class="big">${fQ(it.recebido)}</span></div>
+  <div><span class="label">A receber</span><span class="big" style="color:var(--warn)">${fQ(it.pend)}</span></div><div><span class="label">Disponível</span><span class="big">${fQ(it.disp)}</span></div>
+  <div><span class="label">Atendida no ERP</span><span class="big">${fQ(it.erp)}</span></div></div>
+  ${barra(it.qtd,Math.min(it.recebido,it.qtd),it.pend)}
+  <h3>Solicitações</h3><div class="tbl-wrap">${sols.length?`<table><thead><tr><th>Nº</th><th>Data</th><th>Situação</th><th class="num">Pedido</th><th class="num">Recebido</th><th class="num">Falta</th></tr></thead><tbody>${sols.map(({s,l})=>`<tr class="click" data-act="abrir-sol" data-id="${esc(s.id)}"><td class="mono">${pad4(s.num)}</td><td>${fD(s.data)}</td><td><span class="pill ${s.st.c}">${s.st.t}</span></td><td class="num">${fQ(l.qtd)}</td><td class="num">${fQ(l.rec)}</td><td class="num">${l.pend?fQ(l.pend):'—'}</td></tr>`).join('')}</tbody></table>`:'<p class="muted">Nenhuma solicitação com este item.</p>'}</div>
+  <h3>Recebimentos</h3><div class="tbl-wrap">${recs.length?`<table><thead><tr><th>Data</th><th>NF</th><th>Origem</th><th class="num">Qtd.</th></tr></thead><tbody>${recs.map(({r,q})=>`<tr><td>${fD(r.data)}</td><td class="mono">${esc(r.nf||'—')}</td><td>${origemTxt(r.origem)}</td><td class="num">${fQ(q)}</td></tr>`).join('')}</tbody></table>`:'<p class="muted">Nada recebido.</p>'}</div>`);
+}
+
+// formulário de recebimento
+let RF=null;
+function abrirRecebimento(solId){
+  RF = {sol: solId||'', data: today(), nf:'', obs:'', qtd:{}, cat: LS.get('cat','EPI'), q:''};
+  if (solId){ const s=S.M.solById[solId]; s.linhas.forEach(l=>{ if (l.pend>0) RF.qtd[l.k]=l.pend; }); }
+  desenhaRec();
+}
+function desenhaRec(){
+  const abertas = S.M.sols.filter(s=>s.status==='enviada' && s.totPend>0.0001).sort((a,b)=>a.num-b.num);
+  let linhas;
+  if (RF.sol){ const s=S.M.solById[RF.sol]; linhas = s.linhas.filter(l=>l.pend>0).map(l=>({k:l.k, pc:l.pc, cod:l.cod, desc:l.desc, un:l.un, ref:l.pend, refT:'Falta'})); }
+  else { const q=RF.q.trim().toLowerCase(); linhas = Object.values(S.M.items).filter(i=>i.cat===RF.cat && (RF.qtd[i.k]>0 || !q || i.desc.toLowerCase().includes(q) || i.cod.includes(q))).sort((a,b)=>a.desc.localeCompare(b.desc)).map(i=>({k:i.k, pc:i.pc, cod:i.cod, desc:i.desc, un:i.un, ref:Math.max(0,i.qtd-i.recebido), refT:'Saldo a receber'})); }
+  const n = Object.values(RF.qtd).filter(v=>v>0).length;
+  modal(`<div class="spread"><h2>Registrar recebimento</h2><button class="btn" data-act="modal-close">Fechar</button></div>
+  <div class="row" style="align-items:flex-end">
+    <div class="field" style="flex:1;min-width:220px"><label class="label" for="rf-sol">Solicitação</label><select id="rf-sol" data-act="rf-sol">
+      <option value="">Sem solicitação (entrega avulsa)</option>${abertas.map(s=>`<option value="${esc(s.id)}" ${RF.sol===s.id?'selected':''}>Nº ${pad4(s.num)} · ${esc(s.categoria)} · ${fD(s.data)} · falta ${fR(s.totPend)}</option>`).join('')}</select></div>
+    <div class="field"><label class="label" for="rf-data">Data da chegada</label><input id="rf-data" type="date" value="${esc(RF.data)}"></div>
+    <div class="field"><label class="label" for="rf-nf">Nota fiscal</label><input id="rf-nf" value="${esc(RF.nf)}" placeholder="Nº da NF" style="width:130px"></div>
+  </div>
+  ${RF.sol?'':`<div class="row"><div class="chips">${categorias().map(c=>`<button class="chip" aria-pressed="${RF.cat===c}" data-act="rf-cat" data-v="${esc(c)}">${esc(c)}</button>`).join('')}</div><input id="rf-q" type="search" placeholder="Buscar item" value="${esc(RF.q)}" data-act="rf-q" style="flex:1;min-width:160px"></div>`}
+  <div class="tbl-wrap" style="max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:5px">${linhas.length?`<table><thead><tr><th>PC</th><th>Código</th><th>Descrição</th><th>Un.</th><th class="num">${RF.sol?'Falta':'A receber'}</th><th class="num">Chegou</th></tr></thead><tbody>
+  ${linhas.map(l=>`<tr><td class="mono">${esc(l.pc)}</td><td class="mono">${esc(l.cod)}</td><td class="desc">${esc(l.desc)}</td><td>${esc(l.un)}</td><td class="num">${fQ(l.ref)}</td>
+    <td class="num"><input class="q" id="rq-${esc(l.k)}" type="number" min="0" step="any" inputmode="decimal" data-act="rf-q-item" data-k="${esc(l.k)}" value="${RF.qtd[l.k]||''}" aria-label="Quantidade recebida ${esc(l.desc)}"></td></tr>`).join('')}
+  </tbody></table>`:'<div class="empty">Nenhum item.</div>'}</div>
+  ${RF.sol?'<p class="muted" style="margin:0">As quantidades vêm preenchidas com o que falta. Ajuste para o que realmente chegou e apague o que não veio.</p>':''}
+  <div class="field"><label class="label" for="rf-obs">Observação</label><input id="rf-obs" value="${esc(RF.obs)}" placeholder="Ex.: veio faltando 2 caixas"></div>
+  <div class="row" style="justify-content:flex-end"><button class="btn" data-act="modal-close">Cancelar</button><button class="btn pri" data-act="rf-salvar" ${ADM()?'':'disabled'}>Salvar recebimento</button></div>`);
+}
+function lerRecForm(){ RF.data=$('#rf-data')?.value||RF.data; RF.nf=$('#rf-nf')?.value||''; RF.obs=$('#rf-obs')?.value||''; }
+
+// ---------- ações ----------
+async function salvarSol(modo){
+  const d=S.draft;
+  const itens = Object.entries(d.qtd).filter(([k,v])=>v>0 && S.M.items[k]).map(([k,v])=>({pc:S.M.items[k].pc, cod:S.M.items[k].cod, qtd:r2(v)}));
+  if (!itens.length) return;
+  const editando = d.id ? S.sols[d.id] : null;
+  let id=d.id, num=d.num;
+  if (!editando){ num=await nextSeq(); id='s'+pad4(num); while (S.sols[id]) { num++; id='s'+pad4(num); } }
+  const prev = editando ? {...editando} : {}; const autor = prev.autor; delete prev.id; delete prev.autor;
+  const doc = {...prev, num, data:d.data||today(), categoria:d.categoria, solicitante:(d.solicitante||'').trim(), email:(d.email||'').trim(), zap:(d.zap||'').trim(),
+    obs:d.obs||'', urgente:!!d.urgente, itens, criadaEm: prev.criadaEm || new Date().toISOString(), atualizadaEm:new Date().toISOString()};
+  if (ADM()){
+    if (editando && autor){ doc.status = prev.status||'aguardando'; await setRef(solRef(id), doc); if (modo==='enviada') await setStatus(id,'enviada',{enviadaEm:today()}); }
+    else { doc.status = modo; doc.enviadaEm = modo==='enviada' ? (prev.enviadaEm||today()) : null; await setRef(solRef(id), doc); }
+  } else {
+    if (!S.uid){ S.role='viewer'; applyRole(); render(true); toast('Não foi possível identificar você. Use Enviar ao almoxarifado pelo Outlook.'); return; }
+    if (!S.marker){ await setRef(S.db.collection('solicitacoes').doc(S.uid), {tipo:'usuario', em:Date.now()}); S.marker=true; watchUser(S.uid); }
+    const ref=S.db.collection('solicitacoes').doc(S.uid).collection('itens').doc(id);
+    doc.status='aguardando'; doc.enviadaEm=null;
+    await setRef(ref, doc); REFS[id]=ref;
+  }
+  LS.set('solicitante', d.solicitante||''); LS.set('solEmail', d.email||''); LS.set('solZap', d.zap||''); LS.set('cat', d.categoria);
+  S.draft=null;
+  toast(modo==='enviada'?`Solicitação ${pad4(num)} salva. Agora envie ao Compras.`: modo==='aguardando'?`Solicitação ${pad4(num)} enviada ao almoxarifado.`:`Rascunho ${pad4(num)} salvo.`);
+  go('sol', id);
+  if (modo==='enviada') { let t=0; const abre=()=>{ if (S.M.solById[id]) abrirEnvio(id); else if (++t<20) setTimeout(abre,150); }; abre(); }
+}
+// pedido de quem só consulta: não grava, vai por e-mail ao almoxarifado
+function solPrevia(){
+  const d=S.draft;
+  const itens = Object.entries(d.qtd).filter(([k,v])=>v>0 && S.M.items[k]).map(([k,v])=>({pc:S.M.items[k].pc, cod:S.M.items[k].cod, qtd:r2(v)}));
+  return solView({id:'previa', num:null, data:d.data||today(), categoria:d.categoria, status:'aguardando', solicitante:(d.solicitante||'').trim(), email:(d.email||'').trim(), zap:(d.zap||'').trim(), obs:d.obs||'', urgente:!!d.urgente, itens}, S.M.items, {}, false);
+}
+let PREVIA=null;
+function textoAlmox(s){
+  const L=[`${saudacao()}!`,'',`Solicito a entrega dos itens abaixo pelo contrato ${s.categoria}${s.urgente?' (URGENTE)':''}:`,''];
+  s.linhas.forEach((l,i)=>L.push(`${i+1}. ${l.cod} - ${l.desc} - QTD: ${fQ(l.qtd)} ${l.un} (PC ${l.pc})`));
+  if (s.obs) L.push('',`Observação: ${s.obs}`);
+  L.push('',`Solicitante: ${s.solicitante||''}`);
+  if (s.email) L.push(`E-mail: ${s.email}`); if (s.zap) L.push(`WhatsApp: ${s.zap}`);
+  L.push('','Segue em anexo a planilha do pedido.');
+  return L.join('\n');
+}
+function abrirEnvioAlmox(sv){
+  PREVIA = sv;
+  const para=S.config.emailAlmox||'', modo=LS.get('modoViewer', S.config.outlookModo||'app');
+  const assunto=`Solicitação de entrega - Contrato ${sv.categoria}${sv.num?' - Nº '+pad4(sv.num):''}${sv.solicitante?' - '+sv.solicitante:''}${sv.urgente?' - URGENTE':''}`;
+  modal(`<div class="spread"><div><div class="label">Contrato ${esc(sv.categoria)} · ${sv.linhas.length} ite${sv.linhas.length>1?'ns':'m'} · ${fR(sv.tot)}</div><h2>Enviar ao almoxarifado</h2></div><button class="btn" data-act="modal-close">Fechar</button></div>
+    <div class="fields">
+      <div class="field"><label class="label" for="env-para">Para (almoxarifado)</label><input id="env-para" type="email" value="${esc(para)}" data-act="env-campo" placeholder="e-mail do almoxarifado"></div>
+      <div class="field"><label class="label" for="env-modo">Abrir em</label><select id="env-modo" data-act="env-campo">${Object.entries(MODOS_OUTLOOK).map(([k,m])=>`<option value="${k}" ${k===modo?'selected':''}>${esc(m.t)}</option>`).join('')}</select></div>
+      <div class="field" style="grid-column:1/-1"><label class="label" for="env-assunto">Assunto</label><input id="env-assunto" value="${esc(assunto)}" data-act="env-campo"></div>
+    </div>
+    <div class="field"><label class="label" for="env-corpo">Texto</label><textarea id="env-corpo" class="mailbody" data-act="env-campo">${esc(textoAlmox(sv))}</textarea></div>
+    <div class="notice info"><b>Abrir no Outlook</b> baixa a planilha <span class="mono">${esc(nomeSol(sv))}</span> e abre o e-mail pronto. No Outlook, anexe a planilha e envie.</div>
+    <input id="env-cc" type="hidden" value="">
+    <div class="row" style="justify-content:flex-end"><button class="btn" data-act="exp-previa">Só baixar a planilha</button>
+      <a class="btn pri" id="env-link" href="#" target="_blank" rel="noopener" data-act="env-almox-go">Abrir no Outlook</a></div>`);
+  linkEnvio();
+}
+function textoEmail(s){
+  const L=[];
+  L.push(`PEDIDO DE FORNECIMENTO Nº ${numTxt(s)}${s.urgente?' — URGENTE':''}`);
+  L.push(`Data: ${fD(s.data)} | Contrato ${s.categoria} | Filial 0201 | Armazém 41 - AR. PADRÃO AW`);
+  if (s.solicitante) L.push(`Solicitante: ${s.solicitante}`);
+  L.push('','Prezados, solicitamos a entrega dos itens anexo, conforme contrato:');
+  const g={}; s.linhas.forEach(l=>(g[l.pc] ||= []).push(l));
+  if (s.obs) L.push('',`Observação: ${s.obs}`);
+  L.push('','SALDO DO CONTRATO (posição em '+fD(today())+', já considerando este pedido)');
+  for (const pc of Object.keys(g)){ const c=S.contratos[pc]||{}, t=contratoTotals(pc);
+    L.push(`PC ${pc} — ${shortForn(c.fornecedor||'')}: contratado ${fR(t.v)} | recebido ${fR(t.vr)} | solicitado a receber ${fR(t.vp)} | disponível ${fR(t.vd)} (${fP(t.v?t.vd/t.v:0)})`); }
+  L.push('','Segue em anexo a planilha com o pedido de fornecimento e o saldo atualizado do contrato.','','Atenciosamente,', S.config.assinatura || s.solicitante || '');
+  return L.join('\n');
+}
+// ---------- planilhas padronizadas (ExcelJS) ----------
+const XL = {
+  VERDE:'FF00B050', BRANCO:'FFFFFFFF', PRETO:'FF000000',
+  MOEDA:'"R$"\\ #,##0.00',
+  CONTABIL:'_-"R$"\\ * #,##0.00_-;\\-"R$"\\ * #,##0.00_-;_-"R$"\\ * "-"??_-;_-@_-',
+};
+function xc(ws, ref, v, o={}){
+  const c = ws.getCell(ref);
+  if (v !== undefined) c.value = v;
+  c.font = {name:'Calibri', size:o.size||12, bold:!!o.bold, color:{argb:o.cor||XL.PRETO}};
+  if (o.fill) c.fill = {type:'pattern', pattern:'solid', fgColor:{argb:XL.VERDE}};
+  if (o.h || o.v) c.alignment = {horizontal:o.h, vertical:o.v||'middle', wrapText:!!o.wrap};
+  if (o.fmt) c.numFmt = o.fmt;
+  return c;
+}
+const COLS = n => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.slice(0,n).split('');
+function novoLivro(){ if (!window.ExcelJS) { toast('O gerador de planilhas não carregou. Recarregue a página.'); return null; } const wb=new ExcelJS.Workbook(); wb.creator='Contratos AW'; wb.created=new Date(); return wb; }
+async function baixar(nome, wb){
+  if (!wb) return false;
+  if (!S.dl){ toast('Download indisponível nesta visualização.'); return false; }
+  try { const buf = await wb.xlsx.writeBuffer(); await S.dl.save({filename:nome, data:new Blob([buf])}); return true; }
+  catch(e){ if (e && e.code==='declined') return false; console.error(e); toast('Não foi possível gerar o arquivo.'); return false; }
+}
+// Aba "Pedido Fornecimento" no modelo padrão (colunas A–I)
+function abaPedido(wb, s){
+  const ws = wb.addWorksheet('Pedido Fornecimento', {pageSetup:{orientation:'landscape', fitToPage:true, fitToWidth:1, fitToHeight:0}});
+  [10,13,28.4,21.9,20.1,13,10.9,14.9,10].forEach((w,i)=>ws.getColumn(i+1).width=w);
+  const L = COLS(9);
+  ws.mergeCells('A1:I1'); xc(ws,'A1',`PEDIDO DE FORNECIMENTO Nº ${numTxt(s)}`,{size:18,bold:true,cor:XL.BRANCO,fill:1,h:'center'}); ws.getRow(1).height=23.25;
+  ws.mergeCells('A2:I2'); xc(ws,'A2',`Contrato ${s.categoria} — Filial 0201 | Armazém 41 - AR. PADRAO AW`,{size:14,bold:true,fill:1,h:'center'}); ws.getRow(2).height=18.75;
+  xc(ws,'A3','Data',{bold:true,fill:1}); xc(ws,'B3',fD(s.data),{bold:true}); xc(ws,'D3','Situação',{bold:true,fill:1}); xc(ws,'E3',s.st.t,{bold:true,h:'left'});
+  xc(ws,'A4','Solicitante',{bold:true,fill:1}); xc(ws,'B4',s.solicitante||'',{bold:true}); xc(ws,'D4','Urgente?',{bold:true,fill:1}); xc(ws,'E4',s.urgente?'Sim':'Não',{bold:true,h:'left'});
+  ws.mergeCells('A5:I5'); xc(ws,'A5','',{fill:1,h:'center'});
+  const grupos={}; s.linhas.forEach(l=>(grupos[l.pc] ||= []).push(l));
+  let r = 6; const totais=[];
+  for (const [pc, ls] of Object.entries(grupos)){
+    const c=S.contratos[pc]||{}; const sub=ls.reduce((a,l)=>a+l.total,0);
+    xc(ws,`A${r}`,'Nº Pedido'); xc(ws,`B${r}`,'Cond. de PG'); xc(ws,`C${r}`,condPag(sub)); ws.mergeCells(`D${r}:E${r}`); xc(ws,`D${r}`,'Fornecedor',{h:'left'});
+    xc(ws,`A${r+1}`,pc); xc(ws,`B${r+1}`,'Observação'); xc(ws,`C${r+1}`,s.obs||''); ws.mergeCells(`D${r+1}:E${r+1}`); xc(ws,`D${r+1}`,c.fornecedor||'',{h:'left'});
+    const hr = r+3;
+    ['Item','Cód. Produto','Descrição do Produto','Un.','Qtd.','Valor Unitário','Valor Total','Recebido','Falta'].forEach((t,i)=>xc(ws,`${L[i]}${hr}`,t,{bold:true,cor:XL.BRANCO,fill:1,h:i===0||i>=4?'left':undefined}));
+    const linhas = Math.max(ls.length, 9);
+    for (let i=0;i<linhas;i++){
+      const rr=hr+1+i, l=ls[i];
+      if (!l){ L.forEach(k=>xc(ws,`${k}${rr}`,undefined,{})); continue; }
+      xc(ws,`A${rr}`,i+1,{h:'left'}); xc(ws,`B${rr}`,l.cod); xc(ws,`C${rr}`,l.desc); xc(ws,`D${rr}`,l.un);
+      xc(ws,`E${rr}`,l.qtd,{h:'left'}); xc(ws,`F${rr}`,l.vunit,{h:'left',fmt:XL.MOEDA});
+      xc(ws,`G${rr}`,{formula:`E${rr}*F${rr}`, result:r2(l.total)},{h:'left',fmt:XL.MOEDA});
+      xc(ws,`H${rr}`,l.rec,{h:'left'}); xc(ws,`I${rr}`,l.pend,{h:'left'});
+    }
+    const tr = hr+1+linhas;
+    ws.mergeCells(`A${tr}:F${tr}`); xc(ws,`A${tr}`,'TOTAL',{bold:true,h:'right'});
+    xc(ws,`G${tr}`,{formula:`SUM(G${hr+1}:G${tr-1})`, result:r2(sub)},{bold:true,h:'left',fmt:XL.MOEDA});
+    totais.push(`G${tr}`);
+    r = tr + 3;
+  }
+  if (totais.length>1){
+    ws.mergeCells(`A${r}:F${r}`); xc(ws,`A${r}`,'TOTAL GERAL DO PEDIDO',{bold:true,cor:XL.BRANCO,fill:1,h:'right'});
+    xc(ws,`G${r}`,{formula:totais.join('+'), result:r2(s.tot)},{bold:true,h:'left',fmt:XL.MOEDA,fill:1,cor:XL.BRANCO});
+  }
+  return ws;
+}
+// Aba "Saldo <PC>" no modelo padrão (colunas A–L)
+function abaSaldo(wb, pc, s){
+  const c=S.contratos[pc]||{}, t=contratoTotals(pc);
+  const ws = wb.addWorksheet(('Saldo '+pc).slice(0,31), {pageSetup:{orientation:'landscape', fitToPage:true, fitToWidth:1, fitToHeight:0}});
+  [16.2,46.9,14.4,15.4,18.1,14.9,14.4,18.8,12.9,13.9,14.9,11.9].forEach((w,i)=>ws.getColumn(i+1).width=w);
+  const L = COLS(12);
+  const nesta = {}; if (s) s.linhas.filter(l=>l.pc===pc).forEach(l=>nesta[l.cod]=(nesta[l.cod]||0)+l.qtd);
+  ws.mergeCells('A1:L1'); xc(ws,'A1',`CONTROLE DE SALDO — PEDIDO DE COMPRA ${pc}`,{size:18,bold:true,cor:XL.BRANCO,fill:1,h:'center'}); ws.getRow(1).height=23.25;
+  ws.mergeCells('A2:L2'); xc(ws,'A2',`Fornecedor: ${c.fornecedor||''} (cód. ${c.codFornecedor||''})`,{size:14,bold:true,fill:1,h:'center'}); ws.getRow(2).height=18.75;
+  ws.mergeCells('A3:F3'); xc(ws,'A3',`Contrato ${c.categoria||''} | Comprador: ${c.comprador||''} | SC ${c.sc||''} | Emissão ${c.emissao||''} | Filial ${c.filial||'0201'} | ${c.armazem||''}`,{bold:true,h:'center'});
+  ws.mergeCells('A4:F4'); xc(ws,'A4',`Posição em ${fD(today())}${s?(s.num?` — já considerando o Pedido de Fornecimento Nº ${numTxt(s)}`:' — a coluna Neste Pedido mostra o pedido ainda não registrado no app'):''}`,{bold:true,h:'left'});
+  L.forEach(k=>xc(ws,`${k}6`,'',{bold:true,cor:XL.BRANCO,fill:1}));
+  [['A','Valor Contratado'],['C','Valor Recebido'],['E','Solicitado a Receber'],['G','Valor Disponível'],['I','% Disponível']].forEach(([k,v])=>xc(ws,`${k}6`,v,{bold:true,cor:XL.BRANCO,fill:1}));
+  const rows=(S.M.byPc[pc]||[]).slice().sort((a,b)=>a.desc.localeCompare(b.desc));
+  const first=10, last=first+rows.length-1, tr=last+2;
+  ['Cód. Produto','Descrição do Produto','Un.','Qtd. Contratada','Valor Unitário','Valor Contratado','Qtd. Recebida','Solicitado a Receber','Neste Pedido','Qtd. Disponível','Valor Disponível','% Consumido'].forEach((h,i)=>xc(ws,`${L[i]}9`,h,{bold:true,cor:XL.BRANCO,fill:1}));
+  rows.forEach((i,n)=>{
+    const rr=first+n;
+    xc(ws,`A${rr}`,i.cod); xc(ws,`B${rr}`,i.desc); xc(ws,`C${rr}`,i.un); xc(ws,`D${rr}`,i.qtd,{h:'left'});
+    xc(ws,`E${rr}`,i.vunit,{fmt:XL.CONTABIL}); xc(ws,`F${rr}`,{formula:`D${rr}*E${rr}`, result:r2(i.qtd*i.vunit)},{fmt:XL.CONTABIL});
+    xc(ws,`G${rr}`,i.recebido,{h:'center'}); xc(ws,`H${rr}`,i.pend,{h:'center'}); xc(ws,`I${rr}`,nesta[i.cod]||'',{h:'center',bold:true});
+    xc(ws,`J${rr}`,i.disp,{h:'center'}); xc(ws,`K${rr}`,{formula:`J${rr}*E${rr}`, result:r2(i.disp*i.vunit)},{fmt:XL.CONTABIL});
+    xc(ws,`L${rr}`,{formula:`IF(D${rr}=0,0,(D${rr}-J${rr})/D${rr})`, result:i.qtd?(i.qtd-i.disp)/i.qtd:0},{fmt:'0.0%',h:'center'});
+  });
+  const rg = (col)=> rows.length?`${col}${first}:${col}${last}`:`${col}${first}:${col}${first}`;
+  xc(ws,'A7',{formula:`SUM(${rg('F')})`, result:r2(t.v)},{bold:true,fmt:XL.CONTABIL});
+  xc(ws,'C7',{formula:`SUMPRODUCT(${rg('G')},${rg('E')})`, result:r2(t.vr)},{bold:true,fmt:XL.CONTABIL});
+  xc(ws,'E7',{formula:`SUMPRODUCT(${rg('H')},${rg('E')})`, result:r2(t.vp)},{bold:true,fmt:XL.CONTABIL});
+  xc(ws,'G7',{formula:`SUM(${rg('K')})`, result:r2(t.vd)},{bold:true,fmt:XL.CONTABIL});
+  xc(ws,'I7',{formula:'IF(A7=0,0,G7/A7)', result:t.v?t.vd/t.v:0},{bold:true,fmt:'0%',h:'center'});
+  ws.mergeCells(`A${tr}:E${tr}`); xc(ws,`A${tr}`,'TOTAL',{bold:true,h:'right'});
+  xc(ws,`F${tr}`,{formula:`SUM(${rg('F')})`, result:r2(t.v)},{bold:true,fmt:XL.CONTABIL});
+  xc(ws,`K${tr}`,{formula:`SUM(${rg('K')})`, result:r2(t.vd)},{fmt:XL.CONTABIL});
+  ws.views=[{state:'frozen', ySplit:9}];
+  return ws;
+}
+function nomeSol(s){ return `Pedido_Fornecimento_${s.num?pad4(s.num):'PREVIA'}_${s.categoria}_com_saldo.xlsx`; }
+async function expSol(s){
+  const wb=novoLivro(); if(!wb) return false;
+  abaPedido(wb, s);
+  for (const pc of [...new Set(s.linhas.map(l=>l.pc))]) abaSaldo(wb, pc, s);
+  return baixar(nomeSol(s), wb);
+}
+async function expSaldo(){
+  const wb=novoLivro(); if(!wb) return;
+  const pcs=[...new Set(filtraItens({...S.saldoFiltro, q:'', soSaldo:false}).map(i=>i.pc))].sort();
+  pcs.forEach(pc=>abaSaldo(wb, pc, null));
+  baixar(`Saldo_Contratos_${today()}.xlsx`, wb);
+}
+// ---------- envio ao Compras pelo Outlook ----------
+const MODOS_OUTLOOK = {
+  app:  {t:'Outlook do computador'},
+  o365: {t:'Outlook na web (e-mail da empresa / Microsoft 365)'},
+  live: {t:'Outlook.com (Hotmail / conta pessoal)'},
+};
+function linkOutlook(modo, para, assunto, corpo, cc){
+  const q = (k,v)=>`${k}=${encodeURIComponent(v)}`; const ccq = cc ? '&'+q('cc',cc) : '';
+  if (modo==='o365') return `https://outlook.office.com/mail/deeplink/compose?${q('to',para)}${ccq}&${q('subject',assunto)}&${q('body',corpo)}`;
+  if (modo==='live') return `https://outlook.live.com/mail/0/deeplink/compose?${q('to',para)}${ccq}&${q('subject',assunto)}&${q('body',corpo)}`;
+  return `mailto:${encodeURI(para)}?${cc?q('cc',cc)+'&':''}${q('subject',assunto)}&${q('body',corpo.replace(/\n/g,'\r\n'))}`;
+}
+function linkEnvio(){
+  const a=$('#env-link'); if(!a) return;
+  const para=$('#env-para').value.trim(), cc=($('#env-cc')?.value||'').trim(), modo=$('#env-modo').value, as=$('#env-assunto').value, corpo=$('#env-corpo').value;
+  a.href = linkOutlook(modo, para, as, corpo, cc);
+  const av=$('#env-aviso'); if (av) av.hidden = !(modo==='app' && corpo.length>1800);
+}
+function abrirEnvio(id){
+  const s=S.M.solById[id]; if(!s) return; const c=S.config; const modo=c.outlookModo||'app';
+  const pcs=[...new Set(s.linhas.map(l=>l.pc))];
+  const assunto=`Pedido de Fornecimento Nº ${numTxt(s)} - Contrato ${s.categoria} - PC ${pcs.join('/')}${s.urgente?' - URGENTE':''}`;
+  modal(`<div class="spread"><div><div class="label">Pedido de fornecimento Nº ${numTxt(s)} · ${esc(s.st.t)}</div><h2>Enviar ao Compras</h2></div><button class="btn" data-act="modal-close">Fechar</button></div>
+    <div class="fields">
+      <div class="field"><label class="label" for="env-para">Para (Compras)</label><input id="env-para" type="email" value="${esc(c.emailCompras||'')}" data-act="env-campo" placeholder="compras@empresa.com.br"></div>
+      <div class="field"><label class="label" for="env-cc">Com cópia (CC)</label><input id="env-cc" value="${esc(c.ccCompras||'')}" data-act="env-campo" placeholder="opcional; separe com ;"></div>
+      <div class="field"><label class="label" for="env-modo">Abrir em</label><select id="env-modo" data-act="env-campo">${Object.entries(MODOS_OUTLOOK).map(([k,m])=>`<option value="${k}" ${k===modo?'selected':''}>${esc(m.t)}</option>`).join('')}</select></div>
+      <div class="field" style="grid-column:1/-1"><label class="label" for="env-assunto">Assunto</label><input id="env-assunto" value="${esc(assunto)}" data-act="env-campo"></div>
+    </div>
+    <div class="field"><label class="label" for="env-corpo">Texto do e-mail</label><textarea id="env-corpo" class="mailbody" data-act="env-campo">${esc(textoEmail(s))}</textarea></div>
+    <p class="muted" id="env-aviso" style="margin:0;font-size:12.5px" hidden>Texto longo: o Outlook do computador pode cortar o final. Se acontecer, use Copiar texto e cole na mensagem.</p>
+    <div class="notice info"><b>Abrir no Outlook</b> baixa a planilha padronizada <span class="mono">${esc(nomeSol(s))}</span> (pedido + saldo ${pcs.length>1?'de cada PC':'do PC '+esc(pcs[0])})${s.status==='enviada'?'':', marca a solicitação como enviada'} e abre o e-mail com o que está acima. No Outlook, anexe a planilha e envie.</div>
+    <div class="row" style="justify-content:space-between">
+      <div class="row"><button class="btn sm" data-act="env-padrao">Salvar Para, CC e Abrir em como padrão</button><button class="btn sm" data-act="copiar-mail">Copiar texto</button></div>
+      <div class="row"><button class="btn" data-act="exp-sol" data-id="${esc(id)}">Só baixar a planilha</button>
+      <a class="btn pri" id="env-link" href="#" target="_blank" rel="noopener" data-act="env-outlook" data-id="${esc(id)}">Abrir no Outlook</a></div>
+    </div>
+    ${s.enviadaEm?`<p class="muted" style="margin:0;font-size:12.5px">Enviada ao Compras em ${fD(s.enviadaEm)}.</p>`:''}`);
+  linkEnvio();
+}
+// FIFO: lança como recebido a diferença ERP − app, primeiro nas solicitações mais antigas
+function planoSync(pcs){
+  const porSol={}, avulso={};
+  const solsAb = S.M.sols.filter(s=>s.status==='enviada').sort((a,b)=>a.num-b.num);
+  for (const it of Object.values(S.M.items)){
+    if (pcs && !pcs.includes(it.pc)) continue;
+    let left = r2(it.erp - it.recebido); if (left<=0) continue;
+    for (const s of solsAb){ const p=s.linhas.find(l=>l.k===it.k); if (!p||p.pend<=0) continue; const a=Math.min(left,p.pend); left=r2(left-a); (porSol[s.id] ||= []).push({pc:it.pc,cod:it.cod,qtd:r2(a)}); if (left<=0) break; }
+    if (left>0) (avulso[it.cat] ||= []).push({pc:it.pc,cod:it.cod,qtd:left});
+  }
+  return {porSol, avulso};
+}
+async function executaSync(pcs){
+  const {porSol, avulso} = planoSync(pcs); let n=0;
+  for (const [sol,itens] of Object.entries(porSol)){ await write('recebimentos', uid('r'), {data:today(), nf:'', sol, origem:'erp', obs:'Diferença da Qtd. atendida do ERP', itens}); n++; }
+  for (const [cat,itens] of Object.entries(avulso)){ await write('recebimentos', uid('r'), {data:today(), nf:'', sol:null, origem:'erp', obs:`Diferença da Qtd. atendida do ERP sem solicitação aberta (${cat})`, itens}); n++; }
+  return n;
+}
+
+// importação
+const norm = s => String(s??'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[.\s]+$/,'').replace(/\s+/g,' ').trim();
+async function lerArquivo(file){
+  try{
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf,{type:'array'});
+    let rows=null, hi=-1;
+    for (const sn of wb.SheetNames){ const r=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:''}); const i=r.findIndex(x=>x.some(v=>norm(v)==='numero pc') && x.some(v=>norm(v)==='cod. produto'||norm(v)==='cod produto')); if (i>=0){ rows=r; hi=i; break; } }
+    if (!rows) { toast('Não achei as colunas "Número PC" e "Cód. Produto" nessa planilha.'); return; }
+    const H = rows[hi].map(norm); const col = (...names) => { for (const n of names){ const i=H.indexOf(n); if (i>=0) return i; } return -1; };
+    const C = {pc:col('numero pc'), cod:col('cod. produto','cod produto'), desc:col('descricao produto','descricao do produto'), un:col('unidade de medida','un'), qtd:col('quantidade'), at:col('quantidade atendida'),
+      vu:col('valor unitario'), forn:col('fornecedor'), cforn:col('codigo fornecedor'), comp:col('comprador'), sc:col('numero sc'), em:col('emissao'), fil:col('filial'), arm:col('armazem'), leg:col('legenda')};
+    if (C.qtd<0 || C.vu<0) { toast('Faltam as colunas Quantidade ou Valor Unitário.'); return; }
+    const g = v => v<0 ? '' : v; const pcs={};
+    for (const r of rows.slice(hi+1)){
+      const pc=String(r[C.pc]??'').trim(), cod=String(r[C.cod]??'').trim(); if (!pc||!cod) continue;
+      const exist=S.contratos[pc];
+      const c = pcs[pc] ||= {pc, categoria: exist?.categoria || (cod.startsWith('75')?'LIMPEZA':cod.startsWith('79')?'EPI':'OUTROS'), fornecedor:String(r[g(C.forn)]??'').trim(), codFornecedor:String(r[g(C.cforn)]??'').trim(),
+        comprador:String(r[g(C.comp)]??'').trim(), sc:String(r[g(C.sc)]??'').trim(), emissao:fmtEm(r[g(C.em)]), filial:String(r[g(C.fil)]??'').trim(), armazem:String(r[g(C.arm)]??'').trim(), atualizadoEm:today(), itens:[]};
+      c.itens.push({cod, desc:String(r[g(C.desc)]??'').replace(/\s+/g,' ').trim(), un:String(r[g(C.un)]??'').trim(), qtd:r2(parseNum(r[C.qtd])), vunit:r2(parseNum(r[C.vu])), atendidaErp: C.at>=0? r2(parseNum(r[C.at])):0, legenda:String(r[g(C.leg)]??'').trim()});
+    }
+    const list = Object.values(pcs).map(c=>{
+      const ex=S.contratos[c.pc]; const ch={novos:0,removidos:0,qtd:0,preco:0,atend:0,atendQ:0};
+      if (ex){ const m=Object.fromEntries(ex.itens.map(i=>[i.cod,i])); const nm=new Set(c.itens.map(i=>i.cod));
+        for (const i of c.itens){ const o=m[i.cod]; if(!o){ch.novos++; continue;} if (o.qtd!==i.qtd) ch.qtd++; if (o.vunit!==i.vunit) ch.preco++; }
+        for (const i of ex.itens) if (!nm.has(i.cod)) { ch.removidos++; c.itens.push({...i}); }
+      }
+      for (const i of c.itens){ const it=S.M.items[key(c.pc,i.cod)]; const d=r2(i.atendidaErp - (it?it.recebido:0)); if (d>0){ ch.atend++; ch.atendQ+=d; } }
+      return {pc:c.pc, c, novo:!ex, changes:ch};
+    });
+    if (!list.length){ toast('Nenhuma linha de pedido encontrada.'); return; }
+    S.imp = {nome:file.name, pcs:list, sync:true}; render(true);
+  }catch(e){ console.error(e); toast('Não consegui ler esse arquivo.'); }
+}
+function fmtEm(v){ if (typeof v==='number'){ const d=XLSX.SSF.parse_date_code(v); return d?`${String(d.d).padStart(2,'0')}/${String(d.m).padStart(2,'0')}/${d.y}`:String(v); } return String(v??'').trim(); }
+function bindDrop(){
+  const d=$('#drop'); if(!d) return;
+  d.addEventListener('dragover',e=>{e.preventDefault(); d.classList.add('over');});
+  d.addEventListener('dragleave',()=>d.classList.remove('over'));
+  d.addEventListener('drop',e=>{e.preventDefault(); d.classList.remove('over'); const f=e.dataTransfer.files[0]; if (f) lerArquivo(f);});
+}
+async function confirmaImport(){
+  const imp=S.imp; if(!imp) return;
+  for (const p of imp.pcs){ const cat=(p.c.categoria||'OUTROS').trim().toUpperCase(); p.c.categoria=cat; await write('contratos', p.pc, p.c); S.contratos[p.pc]=p.c; }
+  const cats=new Set(S.config.categorias||[]); let novaCat=false; imp.pcs.forEach(p=>{ if(!cats.has(p.c.categoria)){cats.add(p.c.categoria); novaCat=true;} });
+  if (novaCat) await write('config','geral',{...S.config, categorias:[...cats]});
+  let n=0; if (imp.sync){ compute(); n = await executaSync(imp.pcs.map(p=>p.pc)); }
+  S.imp=null; toast(`Importado: ${imp.pcs.length} PC${imp.pcs.length>1?'s':''}${n?` · ${n} recebimento${n>1?'s':''} lançado${n>1?'s':''}`:''}.`);
+  go('painel');
+}
+
+// ---------- eventos ----------
+document.addEventListener('click', async e=>{
+  const g=e.target.closest('[data-go]'); if (g){ if (g.dataset.go==='nova' && !S.draft) S.draft=novoDraft(); go(g.dataset.go); return; }
+  const a=e.target.closest('[data-act]'); if(!a) return;
+  const act=a.dataset.act, id=a.dataset.id;
+  if (act==='modal-bg'){ if (e.target===a) closeModal(); return; }
+  switch(act){
+    case 'modal-close': closeModal(); break;
+    case 'confirm-yes': { const cb=confirmCb; confirmCb=null; closeModal(); if (cb) { try{ await cb(); }catch(err){} } break; }
+    case 'ver-saldo': S.saldoFiltro={...S.saldoFiltro, cat:'TODAS', pc:a.dataset.pc, q:''}; go('saldo'); break;
+    case 'f-cat': S.saldoFiltro.cat=a.dataset.v; S.saldoFiltro.pc='TODOS'; render(true); break;
+    case 'f-sol': S.solFiltro.st=a.dataset.v; render(true); break;
+    case 'f-sol-go': S.solFiltro={st:a.dataset.v, q:'', cat:'TODAS'}; go('solicitacoes'); break;
+    case 'item': itemHist(a.dataset.k); break;
+    case 'nova-de-saldo': { const cat = S.saldoFiltro.cat!=='TODAS' ? S.saldoFiltro.cat : (S.saldoFiltro.pc!=='TODOS'? S.contratos[S.saldoFiltro.pc]?.categoria : null); if (!S.draft || (cat && S.draft.categoria!==cat && !Object.keys(S.draft.qtd).length)) S.draft=novoDraft(cat||undefined); go('nova'); break; }
+    case 'abrir-sol': closeModal(); go('sol', id); break;
+    case 'd-cat': if (S.draft.categoria!==a.dataset.v){ const tem=Object.values(S.draft.qtd).some(v=>v>0); const troca=()=>{ S.draft.categoria=a.dataset.v; S.draft.qtd={}; render(true); }; if (tem) confirmar('Trocar de contrato?','As quantidades já digitadas serão apagadas.','Trocar',troca,false); else troca(); } break;
+    case 'limpar-draft': S.draft=novoDraft(S.draft?.categoria); render(true); break;
+    case 'salvar-sol': a.disabled=true; try{ await salvarSol(a.dataset.modo); }catch(err){ a.disabled=false; } break;
+    case 'envio-almox': abrirEnvioAlmox(solPrevia()); break;
+    case 'avisar-almox': abrirEnvioAlmox(S.M.solById[id]); break;
+    case 'exp-previa': if (PREVIA) expSol(PREVIA); break;
+    case 'env-almox-go': { const m=$('#env-modo').value; LS.set('modoViewer', m); if (PREVIA) expSol(PREVIA); break; }
+    case 'editar-sol': { const s=S.sols[id]; S.draft={id, num:s.num, categoria:s.categoria, qtd:Object.fromEntries((s.itens||[]).map(l=>[key(l.pc,l.cod),l.qtd])), urgente:!!s.urgente, solicitante:s.solicitante||'', email:s.email||'', zap:s.zap||'', obs:s.obs||'', data:s.data||today(), q:'', soSaldo:true}; go('nova'); break; }
+    case 'enviar-sol': await setStatus(id,'enviada',{enviadaEm:today()}); toast('Marcada como enviada ao Compras.'); if ($('#modal-root').innerHTML) closeModal(); break;
+    case 'cancelar-sol': confirmar('Cancelar solicitação?','As quantidades voltam para o saldo disponível do contrato.','Cancelar solicitação', async()=>{ await setStatus(id,'cancelada'); toast('Solicitação cancelada.'); }); break;
+    case 'encerrar-sol': confirmar('Encerrar o que falta?','Use quando o fornecedor não vai entregar o restante. O que falta volta para o saldo disponível; o que já chegou continua registrado.','Encerrar', async()=>{ await setStatus(id,'encerrada',{encerradaEm:today()}); toast('Pendências encerradas.'); }); break;
+    case 'reabrir-sol': await setStatus(id,'enviada'); toast('Pendências reabertas.'); break;
+    case 'excluir-sol': confirmar('Excluir solicitação?','Ela some do histórico. Não dá para desfazer.','Excluir', async()=>{ await delSol(id); toast('Solicitação excluída.'); go('solicitacoes'); }); break;
+    case 'copiar-email': abrirEnvio(id); break;
+    case 'env-padrao': { const v=$('#env-para').value.trim(), cc=$('#env-cc').value.trim(), m=$('#env-modo').value; await write('config','geral',{...S.config, emailCompras:v, ccCompras:cc, outlookModo:m}); S.config={...S.config, emailCompras:v, ccCompras:cc, outlookModo:m}; toast('Padrão de envio salvo.'); break; }
+    case 'env-outlook': { const s=S.M.solById[id]; expSol(s); if (s.status==='rascunho'||s.status==='aguardando') { setStatus(id,'enviada',{enviadaEm:today()}).then(()=>toast('Solicitação marcada como enviada ao Compras.')).catch(()=>{}); } break; }
+    case 'rt-editar': S.rtEdit=id; render(true); break;
+    case 'rt-cancel': S.rtEdit=null; render(true); break;
+    case 'rt-salvar': { const n=$('#rt-num').value.trim(), dt=$('#rt-data').value||today(), pv=$('#rt-prev').value||'', ob=$('#rt-obs').value.trim();
+      a.disabled=true; try{ await patchRet(id,{compras:{num:n.toUpperCase(), data:dt, previsao:pv, obs:ob, em:new Date().toISOString()}}); S.rtEdit=null; toast('Retorno do Compras registrado.'); }catch(err){ a.disabled=false; } break; }
+    case 'av-enviar': { const s=S.M.solById[id]; if (!s||!s.etapa) break; const via=a.dataset.via;
+      const em=$('#av-email').value.trim(), zap=$('#av-zap').value.trim();
+      if ((em!==(s.email||'')) || (zap!==(s.zap||''))) { const d={...S.sols[id], email:em, zap}; delete d.id; delete d.autor; setRef(solRef(id), d).catch(()=>{}); }
+      patchRet(id,{avisos:[...(s.avisos||[]), {etapa:s.etapa, via, em:new Date().toISOString()}]}).then(()=>toast(via==='outro'?'Aviso registrado.':'Aviso registrado. Confira o envio no '+(via==='whatsapp'?'WhatsApp':'Outlook')+'.')).catch(()=>{}); break; }
+    case 'copiar': copiar(a.dataset.txt); break;
+    case 'copiar-mail': { const t=$('#env-corpo'); copiar(t.value, t); break; }
+    case 'exp-sol': expSol(S.M.solById[id]); break;
+    case 'exp-saldo': expSaldo(); break;
+    case 'sync-erp': { const {porSol,avulso}=planoSync(null); const n=Object.keys(porSol).length+Object.keys(avulso).length; confirmar('Lançar recebimentos pelo ERP?', `Vou criar ${n} recebimento${n>1?'s':''} com a diferença entre a Qtd. atendida do ERP e o recebido no app, abatendo primeiro das solicitações mais antigas.`, 'Lançar', async()=>{ const k=await executaSync(null); toast(`${k} recebimento${k>1?'s':''} lançado${k>1?'s':''}.`); }, false); break; }
+    case 'receber': abrirRecebimento(id||''); break;
+    case 'rf-cat': lerRecForm(); RF.cat=a.dataset.v; desenhaRec(); break;
+    case 'rf-salvar': { lerRecForm(); const itens=Object.entries(RF.qtd).filter(([k,v])=>v>0&&S.M.items[k]).map(([k,v])=>({pc:S.M.items[k].pc,cod:S.M.items[k].cod,qtd:r2(v)}));
+      if (!itens.length){ toast('Informe a quantidade de pelo menos um item.'); break; }
+      a.disabled=true; try{ await write('recebimentos', uid('r'), {data:RF.data||today(), nf:RF.nf.trim(), sol:RF.sol||null, origem:'app', obs:RF.obs.trim(), itens, criadoEm:new Date().toISOString()}); closeModal(); toast('Recebimento registrado.'); }catch(err){ a.disabled=false; } break; }
+    case 'ver-rec': { const full={id, ...S.recs[id]}; const pcF=a.dataset.pc; const r=pcF?{...full, itens:(full.itens||[]).filter(l=>l.pc===pcF)}:full; const s=r.sol?S.M.solById[r.sol]:null;
+      const outros=[...new Set((full.itens||[]).map(l=>l.pc))].filter(p=>p!==pcF);
+      modal(`<div class="spread"><div><div class="label">${fD(r.data)} · NF ${esc(r.nf||'—')}</div><h2>Recebimento ${s?`da solicitação ${pad4(s.num)}`:'sem solicitação'}</h2></div><button class="btn" data-act="modal-close">Fechar</button></div>
+      ${recPorPc(r)}
+      ${r.obs?`<p class="muted" style="margin:0">${esc(r.obs)}</p>`:''}
+      ${pcF && outros.length?`<p class="muted" style="margin:0">Este recebimento também tem itens do PC ${outros.map(esc).join(', ')}, que aparecem no grupo do outro fornecedor.</p>`:''}
+      <div class="row" style="justify-content:space-between">${ADM()?`<button class="btn danger" data-act="del-rec" data-id="${esc(id)}">Excluir recebimento</button>`:'<span></span>'}${s?`<button class="btn" data-act="abrir-sol" data-id="${esc(s.id)}">Abrir solicitação</button>`:''}</div>`); break; }
+    case 'del-rec': confirmar('Excluir recebimento?', (()=>{ const p=[...new Set((S.recs[id]?.itens||[]).map(l=>l.pc))]; return 'As quantidades deixam de contar como recebidas.' + (p.length>1?` O recebimento inteiro será excluído, incluindo os itens dos PCs ${p.map(esc).join(' e ')}.`:''); })(),'Excluir', async()=>{ await remove('recebimentos', id); toast('Recebimento excluído.'); }); break;
+    case 'imp-ok': a.disabled=true; try{ await confirmaImport(); }catch(err){ a.disabled=false; } break;
+    case 'imp-cancel': S.imp=null; render(true); break;
+    case 'salvar-ajustes': { const cats=$('#a-cats').value.split(',').map(s=>s.trim().toUpperCase()).filter(Boolean);
+      await write('config','geral',{...S.config, limiteParcelamento:parseNum($('#a-lim').value), parcelas:Math.max(1,parseInt($('#a-parc').value)||1), emailCompras:$('#a-mail').value.trim(), ccCompras:$('#a-cc').value.trim(), emailAlmox:$('#a-almox').value.trim(), assinatura:$('#a-assin').value.trim(), outlookModo:$('#a-modo').value, categorias:cats}); toast('Ajustes salvos.'); break; }
+  }
+});
+async function copiar(txt, el){
+  try { await navigator.clipboard.writeText(txt); toast('Copiado.'); }
+  catch(e){ if (el){ const r=document.createRange(); r.selectNodeContents(el); const s=getSelection(); s.removeAllRanges(); s.addRange(r); } toast('Selecionei o texto: use Ctrl+C para copiar.'); }
+}
+document.addEventListener('input', e=>{
+  const a=e.target.closest('[data-act]'); if(!a) return;
+  const d=S.draft;
+  switch(a.dataset.act){
+    case 'f-q': S.saldoFiltro.q=a.value; clearTimeout(S._t); S._t=setTimeout(()=>{ const pos=a.selectionStart; render(true); const n=$('#f-q'); if(n){ n.focus(); try{n.setSelectionRange(pos,pos);}catch(x){} } },200); break;
+    case 'd-busca': d.q=a.value; clearTimeout(S._t); S._t=setTimeout(()=>{ const pos=a.selectionStart; render(true); const n=$('#d-q'); if(n){ n.focus(); try{n.setSelectionRange(pos,pos);}catch(x){} } },200); break;
+    case 'd-q': { const v=parseNum(a.value); if (v>0) d.qtd[a.dataset.k]=v; else delete d.qtd[a.dataset.k];
+      a.classList.toggle('err', v>Number(a.dataset.max)+1e-9); const it=S.M.items[a.dataset.k]; const td=document.querySelector(`[data-tot="${CSS.escape(a.dataset.k)}"]`); if (td) td.textContent = v?fR(v*it.vunit):''; atualizaNovaResumoKeep(); break; }
+    case 'd-solicitante': d.solicitante=a.value; break;
+    case 'd-email': d.email=a.value; break;
+    case 'd-zap': d.zap=a.value; break;
+    case 'env-campo': linkEnvio(); break;
+    case 'av-campo': linksAviso(); break;
+    case 's-q': S.solFiltro.q=a.value; clearTimeout(S._t); S._t=setTimeout(()=>{ const pos=a.selectionStart; render(true); const n=$('#s-q'); if(n){ n.focus(); try{n.setSelectionRange(pos,pos);}catch(x){} } },250); break;
+    case 'd-obs': d.obs=a.value; break;
+    case 'd-data': d.data=a.value; break;
+    case 'rf-q-item': { const v=parseNum(a.value); if (v>0) RF.qtd[a.dataset.k]=v; else delete RF.qtd[a.dataset.k]; break; }
+    case 'rf-q': lerRecForm(); RF.q=a.value; clearTimeout(S._t); S._t=setTimeout(()=>{ const pos=a.selectionStart; desenhaRec(); const n=$('#rf-q'); if(n){ n.focus(); try{n.setSelectionRange(pos,pos);}catch(x){} } },250); break;
+    case 'imp-cat': { const p=S.imp.pcs.find(p=>p.pc===a.dataset.pc); if(p) p.c.categoria=a.value; break; }
+  }
+});
+function atualizaNovaResumoKeep(){
+  // atualiza o resumo sem perder o foco do campo de quantidade
+  const ae=document.activeElement, idf=ae&&ae.id; atualizaNovaResumo(); if (idf && document.getElementById(idf)!==ae) document.getElementById(idf)?.focus();
+}
+document.addEventListener('change', e=>{
+  const a=e.target.closest('[data-act]'); if(!a) return;
+  switch(a.dataset.act){
+    case 'f-pc': S.saldoFiltro.pc=a.value; render(true); break;
+    case 'f-so': S.saldoFiltro.soSaldo=a.checked; render(true); break;
+    case 'd-so': S.draft.soSaldo=a.checked; render(true); break;
+    case 'd-urg': S.draft.urgente=a.checked; break;
+    case 'rf-sol': lerRecForm(); RF.sol=a.value; RF.qtd={}; if (RF.sol){ S.M.solById[RF.sol].linhas.forEach(l=>{ if(l.pend>0) RF.qtd[l.k]=l.pend; }); } desenhaRec(); break;
+    case 'imp-file': if (a.files[0]) lerArquivo(a.files[0]); a.value=''; break;
+    case 'imp-sync': S.imp.sync=a.checked; break;
+    case 's-cat': S.solFiltro.cat=a.value; render(true); break;
+    case 'env-campo': linkEnvio(); break;
+  }
+});
+document.addEventListener('keydown', e=>{ if (e.key==='Escape' && $('#modal-root').innerHTML) closeModal(); });
+
+// ---------- início ----------
+function rebuildSols(){ S.sols = {...S.topSols}; for (const m of Object.values(S.userSols)) Object.assign(S.sols, m); }
+function watchUser(u){
+  if (USERSUB[u]) return;
+  const col=S.db.collection('solicitacoes').doc(u).collection('itens');
+  USERSUB[u]=col.onSnapshot(snap=>{ const m={}; snap.docs.forEach(d=>{ REFS[d.id]=col.doc(d.id); m[d.id]={...d.data(), id:d.id, autor:u}; }); S.userSols[u]=m; rebuildSols(); onData(); }, err=>console.error('itens', err));
+}
+function onData(){
+  if (!Object.values(S.ready).every(Boolean)) return;
+  compute(); render();
+}
+(async ()=>{
+  const h=(location.hash||'').slice(1); if (['painel','saldo','nova','solicitacoes','recebimentos','importar','ajustes'].includes(h)) { S.view=h; if (h==='nova') S.draft=novoDraft(); }
+  let claude = window.claude;
+  for (let i=0; i<30 && !(claude && claude.use); i++){ await new Promise(r=>setTimeout(r,100)); claude = window.claude; }
+  if (!claude || !claude.use){ $('#main').innerHTML='<div class="panel empty"><h2>Abra este app no Claude</h2><p class="sub">Os dados dos contratos ficam guardados na base do app, disponível quando ele é aberto pelo link do Claude.</p></div>'; return; }
+  S.dl = await claude.use('downloads').catch(()=>null);
+  S.db = await claude.use('db').catch(()=>null);
+  if (!S.db){ $('#main').innerHTML='<div class="panel empty"><h2>Base de dados indisponível</h2><p class="sub">Entre na sua conta do Claude e abra o app novamente para ver os contratos.</p></div>'; return; }
+  try {
+    const u = await claude.use('user');
+    if (u){
+      const [own, edit, w, me] = await Promise.all([u.isOwner().catch(()=>false), u.canEdit().catch(()=>false), u.can('data.write').catch(()=>null), u.id().catch(()=>null)]);
+      S.uid = me || null;
+      S.role = (own||edit) ? 'admin' : (w===false ? 'viewer' : 'user');
+    }
+  } catch(e){}
+  applyRole();
+  const sub = (col, fn) => S.db.collection(col).onSnapshot(snap=>{ fn(snap); S.ready[col]=true; onData(); }, err=>{ console.error(col, err); S.ready[col]=true; onData(); });
+  sub('contratos', snap=>{ S.contratos = Object.fromEntries(snap.docs.map(d=>[d.id, {...d.data(), pc:d.data().pc||d.id}])); });
+  sub('solicitacoes', snap=>{ const top={};
+    snap.docs.forEach(d=>{ const v=d.data(); if (v && v.tipo==='usuario'){ if (d.id===S.uid) S.marker=true; watchUser(d.id); return; } REFS[d.id]=S.db.collection('solicitacoes').doc(d.id); top[d.id]={...v, id:d.id}; });
+    S.topSols=top; rebuildSols(); });
+  sub('retorno', snap=>{ S.ret = Object.fromEntries(snap.docs.map(d=>[d.id, d.data()])); });
+  sub('recebimentos', snap=>{ S.recs = Object.fromEntries(snap.docs.map(d=>[d.id, d.data()])); });
+  sub('config', snap=>{ const g=snap.docs.find(d=>d.id==='geral'); if (g) S.config={...S.config, ...g.data()}; });
+})();
+})();
+</script>
+</body>
+</html>
