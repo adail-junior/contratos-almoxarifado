@@ -9,7 +9,8 @@ window.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXB
 
 
 // E-mails de quem administra o site (importa ERP, registra recebimentos,
-// envia ao Compras). Precisa ser o mesmo e-mail que está no supabase-tabela.sql.
 window.ADMINS = [
-  "adail.junior@doismarcos.com.br"
+  "adail.junior@doismarcos.com.br",
+  "juninhoduraes@hotmail.com"
+];
 ];
